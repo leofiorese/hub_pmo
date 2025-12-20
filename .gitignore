@@ -1,0 +1,47 @@
+# --- Dependências (Nunca subir) ---
+node_modules/
+package-lock.json
+yarn.lock
+# (Nota: Alguns times versionam o lock file, mas para evitar conflitos iniciais, 
+# se quiser pode comentar as linhas do .lock, mas node_modules é obrigatório ignorar)
+
+# --- Variáveis de Ambiente (SEGURANÇA CRÍTICA) ---
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+*.env.*
+
+# --- Build do Frontend (React/Vite) ---
+/client/dist/
+/client/build/
+/client/out/
+
+# --- Logs e Debug ---
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+pnpm-debug.log*
+
+# --- Editor e IDEs ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Sistema Operacional ---
+.DS_Store
+Thumbs.db
+
+# --- Playwright (Automação/Testes) ---
+/server/test-results/
+/server/playwright-report/
+/server/blob-report/
+/server/playwright/.cache/
+
+# --- Cobertura de Testes ---
+coverage/
