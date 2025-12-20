@@ -14,6 +14,10 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import MainLayout from './components/Layout'; 
 
+// Pages dos PowerBI's
+import Faturamento from './pages/PowerBI/Faturamento';
+import PMO from './pages/PowerBI/PMO';
+
 // Componente para proteger rotas
 const PrivateRoute = ({ children }) => {
   const { signed, loading } = useAuth(); // Aqui usamos o hook novo
@@ -37,6 +41,12 @@ function App() {
 
             <Route path="/" element={<PrivateRoute><MainLayout /></PrivateRoute>}>
               <Route index element={<Dashboard />} />
+            </Route>
+
+            <Route path="/" element={<PrivateRoute><MainLayout /></PrivateRoute>}>
+              <Route index element={<Dashboard />} />
+              <Route path="pbi/faturamento" element={<Faturamento />} />
+              <Route path="pbi/pmo" element={<PMO />} />
             </Route>
 
           </Routes>

@@ -43,7 +43,7 @@ const Sidebar = ({ mobileOpen, handleDrawerToggle, drawerWidth }) => {
         <Collapse in={openPowerBI} timeout="auto" unmountOnExit>
           <List component="div" disablePadding>
             <ListItemButton sx={{ pl: 4 }} onClick={() => navigate('/pbi/faturamento')}>
-              <ListItemText primary="Faturamento" />
+              <ListItemText primary="Dashboard Faturamento" />
             </ListItemButton>
             <ListItemButton sx={{ pl: 4 }} onClick={() => navigate('/pbi/pmo')}>
               <ListItemText primary="Dashboard PMO" />
