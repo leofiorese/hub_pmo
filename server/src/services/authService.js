@@ -1,41 +1,106 @@
 const userRepository = require('../repositories/userRepository');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto'); // Nativo do Node.js para gerar tokens aleatórios
 const jwt = require('jsonwebtoken');
 
 class AuthService {
-    async login(email, password) {
-        // 1. Busca usuário
+    // --- LÓGICA DE LOGIN (ADICIONADA E AJUSTADA) ---
+    async authenticate(email, password) {
         const user = await userRepository.findByEmail(email);
+
         if (!user) {
-            throw new Error('Usuário não encontrado.');
+            throw new Error('Usuário ou senha inválidos.');
         }
 
-        // 2. Verifica senha (o admin inicial tem senha "fake", em produção usaremos bcrypt)
-        // Nota: Para o primeiro login do Admin inserido via SQL, vamos simular que funcionou
-        // Depois implementaremos o cadastro real com hash.
-        
-        const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-        if (!isPasswordValid) {
-            throw new Error('Senha incorreta.');
+        // AJUSTE CRÍTICO: Comparamos a senha digitada com 'password_hash' do banco
+        // (Se usássemos user.password aqui, daria erro pois essa coluna não existe no select)
+        const isValid = await bcrypt.compare(password, user.password_hash);
+
+        if (!isValid) {
+            throw new Error('Usuário ou senha inválidos.');
         }
 
-        // 3. Gera Token JWT
+        // Gera o token JWT
         const token = jwt.sign(
             { id: user.id, role: user.role },
             process.env.JWT_SECRET,
-            { expiresIn: '8h' } // Token expira em um turno de trabalho
+            { expiresIn: '1d' }
         );
 
-        // Retorna dados seguros (sem a senha)
+        // Remove o hash do objeto antes de retornar para o frontend (Segurança)
+        const { password_hash, ...userWithoutPassword } = user;
+
         return {
-            token,
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                role: user.role
-            }
+            user: userWithoutPassword,
+            token
         };
+    }
+
+    // --- LÓGICA DE CADASTRO (MANTIDA) ---
+    async registerUser(data) {
+        const userExists = await userRepository.findByEmail(data.email);
+
+        if (!data.email.toLowerCase().endsWith('@sandech.com.br')) {
+            throw new Error('Acesso negado: Domínio de e-mail não autorizado.');
+        }
+        
+        if (userExists) {
+            throw new Error('Este e-mail já está cadastrado.');
+        }
+
+        // Criptografa a senha antes de salvar
+        const hashedPassword = await bcrypt.hash(data.password, 10);
+
+        // O repositório vai pegar esse 'password' e inserir na coluna 'password_hash'
+        const newId = await userRepository.create({
+            ...data,
+            password: hashedPassword
+        });
+
+        return { id: newId, name: data.name, email: data.email };
+    }
+
+    // --- LÓGICA DE ESQUECEU A SENHA (MANTIDA) ---
+    async sendRecoveryEmail(email) {
+        const user = await userRepository.findByEmail(email);
+        
+        // Segurança: Se o usuário não existe, não retorne erro para não vazar quem tem conta.
+        if (!user) {
+            return { message: 'Se o e-mail existir, o link foi enviado.' };
+        }
+
+        // 1. Gera um token aleatório e seguro
+        const token = crypto.randomBytes(20).toString('hex');
+
+        // 2. Define expiração (1 hora a partir de agora)
+        const now = new Date();
+        now.setHours(now.getHours() + 1);
+
+        // 3. Salva no banco
+        await userRepository.saveResetToken(email, token, now);
+
+        // 4. ENVIO DE E-MAIL (SIMULADO)
+        const resetLink = `http://localhost:5173/reset-password?token=${token}`;
+        
+        console.log('==================================================');
+        console.log('📧 [EMAIL MOCK] Para:', email);
+        console.log('🔗 Link de Recuperação:', resetLink);
+        console.log('==================================================');
+
+        return { message: 'Link de recuperação enviado (verifique o console).' };
+    }
+
+    // --- LÓGICA DE REDEFINIR A SENHA (MANTIDA) ---
+    async resetPassword(token, newPassword) {
+        const user = await userRepository.findByToken(token);
+        if (!user) {
+            throw new Error('Token inválido ou expirado.');
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await userRepository.updatePassword(user.id, hashedPassword);
+        
+        return { message: 'Senha alterada com sucesso.' };
     }
 }
 

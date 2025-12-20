@@ -9,7 +9,7 @@ class AuthController {
                 return res.status(400).json({ error: 'Email e senha são obrigatórios.' });
             }
 
-            const result = await authService.login(email, password);
+            const result = await authService.authenticate(email, password);
             return res.json(result);
 
         } catch (error) {
@@ -19,6 +19,37 @@ class AuthController {
             }
             console.error(error);
             return res.status(500).json({ error: 'Erro interno do servidor.' });
+        }
+    }
+    async register(req, res) {
+        try {
+            const user = await authService.registerUser(req.body);
+            return res.status(201).json(user);
+        } catch (error) {
+            return res.status(400).json({ error: error.message });
+        }
+    }
+
+    // NOVO: Esqueceu a senha
+    async forgotPassword(req, res) {
+        try {
+            const { email } = req.body;
+            const result = await authService.sendRecoveryEmail(email);
+            return res.json(result);
+        } catch (error) {
+            // Em forgot password, evitamos dar muito detalhe de erro por segurança
+            return res.status(500).json({ error: 'Erro ao processar solicitação.' });
+        }
+    }
+
+    // NOVO: Resetar senha (usando o token)
+    async resetPassword(req, res) {
+        try {
+            const { token, newPassword } = req.body;
+            const result = await authService.resetPassword(token, newPassword);
+            return res.json(result);
+        } catch (error) {
+            return res.status(400).json({ error: error.message });
         }
     }
 }
