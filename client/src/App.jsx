@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, CssBaseline } from '@mui/material';
-import theme from './styles/theme';
+import {CssBaseline } from '@mui/material';
+import { CustomThemeProvider } from './contexts/ThemeContext';
 
 // --- IMPORTAÇÕES CORRIGIDAS ---
 // 1. Importa o PROVEDOR (AuthProvider) da pasta contexts
@@ -31,7 +31,7 @@ const PrivateRoute = ({ children }) => {
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
+    <CustomThemeProvider>
       <CssBaseline />
       {/* O AuthProvider precisa estar aqui envolvendo tudo */}
       <AuthProvider>
@@ -52,7 +52,7 @@ function App() {
           </Routes>
         </BrowserRouter>
       </AuthProvider>
-    </ThemeProvider>
+    </CustomThemeProvider>
   );
 }
 
