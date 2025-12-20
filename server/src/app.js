@@ -1,13 +1,17 @@
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config({ path: '../.env' }); // Aponta para o .env na raiz do server
+require('dotenv').config({ path: '../.env' }); // Ajuste o caminho se necessário
+
+const authRoutes = require('./routes/authRoutes'); // <--- Importe aqui
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// Rota de Teste (Health Check)
+// Rotas
+app.use('/api/auth', authRoutes); // <--- Use aqui
+
 app.get('/', (req, res) => {
     res.json({ message: '🚀 PMO Hub Backend está online!' });
 });
