@@ -9,12 +9,12 @@ import {
   TableChart, OpenInNew, Brightness4, Brightness7,
   ChevronLeft, ChevronRight, BusinessCenter,
   AdminPanelSettings as AdminIcon,
-  Edit as EditIcon // <--- Novo Ícone
+  Edit as EditIcon 
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../hooks/useAuth';
-import api from '../../services/api'; // <--- Import API
+import api from '../../services/api'; 
 
 import logoLight from '../../assets/logo.png';
 import logoDark from '../../assets/logo_dark.png';
@@ -92,7 +92,7 @@ const Sidebar = ({
     }
   };
 
-  // Abre o Modal de Edição (Admin)
+  // Abre o Modal de Edição (Admin ou PMO)
   const handleEditLink = (e, key) => {
     e.stopPropagation(); // IMPORTANTE: Impede que o clique no lápis abra o link
     e.preventDefault();  // Previne comportamento padrão de links
@@ -100,7 +100,7 @@ const Sidebar = ({
     setEditDialog(true);
   };
 
-  // Salva a edição do Admin
+  // Salva a edição
   const saveLink = async () => {
     setSaving(true);
     try {
@@ -153,6 +153,7 @@ const Sidebar = ({
           </ListItemButton>
         </Tooltip>
 
+        {/* --- GERENCIAR USUÁRIOS (SÓ ADMIN) --- */}
         {user?.role === 'admin' && (
             <Tooltip title={!isExpanded ? "Gerenciar Usuários" : ""} placement="right">
             <ListItemButton onClick={() => navigate('/admin/users')} sx={getButtonStyle('/admin/users')}>
@@ -205,8 +206,8 @@ const Sidebar = ({
               >
                 <ListItemText primary={tool.title} />
                 
-                {/* BOTÃO DE EDIÇÃO (ADMIN) */}
-                {user?.role === 'admin' ? (
+                {/* BOTÃO DE EDIÇÃO (ADMIN E PMO) */}
+                {['admin', 'pmo'].includes(user?.role) ? (
                     <IconButton 
                         size="small" 
                         onClick={(e) => handleEditLink(e, tool.key)}
@@ -226,8 +227,6 @@ const Sidebar = ({
         <Tooltip title={!isExpanded ? "PSOffice" : ""} placement="right">
           <ListItemButton 
             component="a" 
-            // Se for admin e clicar no botão, também vai pro link, mas tem o lápis
-            // Usamos o link do state ou '#' se não tiver carregado
             href={links['psoffice'] || '#'}
             target="_blank"
             rel="noopener noreferrer"
@@ -238,8 +237,8 @@ const Sidebar = ({
             </ListItemIcon>
             {isExpanded && <ListItemText primary="PSOffice" />}
             
-            {/* BOTÃO DE EDIÇÃO (ADMIN) */}
-            {isExpanded && user?.role === 'admin' ? (
+            {/* BOTÃO DE EDIÇÃO (ADMIN E PMO) */}
+            {isExpanded && ['admin', 'pmo'].includes(user?.role) ? (
                  <IconButton 
                     size="small" 
                     onClick={(e) => handleEditLink(e, 'psoffice')}
@@ -297,7 +296,7 @@ const Sidebar = ({
         </DialogActions>
       </Dialog>
 
-      {/* DIALOG DE EDIÇÃO DE LINK (ADMIN) */}
+      {/* DIALOG DE EDIÇÃO DE LINK (ADMIN/PMO) */}
       <Dialog open={editDialog} onClose={() => setEditDialog(false)} fullWidth maxWidth="sm">
         <DialogTitle>Editar Link</DialogTitle>
         <DialogContent>

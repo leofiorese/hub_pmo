@@ -90,6 +90,35 @@ export default function UsersList() {
     }
   };
 
+  // 4. Excluir Usuário (NOVO)
+  const handleDelete = async () => {
+    if (!currentUser) return;
+
+    // Confirmação nativa do navegador para segurança
+    const confirm = window.confirm(`Tem certeza que deseja EXCLUIR o usuário ${currentUser.name}? Essa ação não pode ser desfeita.`);
+    
+    if (confirm) {
+      setSaving(true); // Reutiliza o estado de loading
+      try {
+        await api.delete(`/admin/users/${currentUser.id}`);
+        
+        setFeedback({ type: 'success', message: 'Usuário excluído com sucesso!' });
+        loadUsers(); // Atualiza a lista
+        
+        // Fecha o modal após 1 segundo
+        setTimeout(() => {
+          handleClose();
+        }, 1000);
+
+      } catch (error) {
+        console.error(error);
+        setFeedback({ type: 'error', message: 'Erro ao excluir usuário.' });
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
+
   return (
     <Box sx={{ display: 'flex' }}>
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -198,12 +227,28 @@ export default function UsersList() {
           </Box>
 
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose} color="inherit">Cancelar</Button>
-          <Button onClick={handleSave} variant="contained" disabled={saving}>
-            {saving ? 'Salvando...' : 'Salvar Alterações'}
+
+        {/* --- ACTIONS ATUALIZADO COM BOTÃO DE EXCLUIR --- */}
+        <DialogActions sx={{ justifyContent: 'space-between', p: 2 }}>
+          {/* Lado Esquerdo: Excluir */}
+          <Button 
+            onClick={handleDelete} 
+            color="error" 
+            variant="outlined" 
+            disabled={saving}
+          >
+            Excluir Usuário
           </Button>
+
+          {/* Lado Direito: Cancelar e Salvar */}
+          <Box>
+            <Button onClick={handleClose} color="inherit" sx={{ mr: 1 }}>Cancelar</Button>
+            <Button onClick={handleSave} variant="contained" disabled={saving}>
+              {saving ? 'Salvando...' : 'Salvar Alterações'}
+            </Button>
+          </Box>
         </DialogActions>
+
       </Dialog>
     </Box>
   );

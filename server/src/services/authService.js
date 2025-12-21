@@ -22,8 +22,12 @@ class AuthService {
 
         // Gera o token JWT
         const token = jwt.sign(
-            { id: user.id, role: user.role },
-            process.env.JWT_SECRET,
+            { 
+            id: user.id,      // <--- CERTIFIQUE-SE QUE ESTA LINHA EXISTE
+            role: user.role,  // <--- CERTIFIQUE-SE QUE ESTA LINHA EXISTE
+            name: user.name 
+            }, 
+            process.env.JWT_SECRET, 
             { expiresIn: '1d' }
         );
 

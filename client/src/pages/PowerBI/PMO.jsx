@@ -72,7 +72,7 @@ export default function PMO() {
         </Typography>
 
         {/* Botão visível apenas para Admin */}
-        {user?.role === 'admin' && (
+        {['admin', 'pmo'].includes(user?.role) && (
           <Tooltip title="Alterar Link do Relatório">
             <Button 
               startIcon={<EditIcon />} 

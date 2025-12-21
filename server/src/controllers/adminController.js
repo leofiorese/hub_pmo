@@ -35,6 +35,16 @@ class AdminController {
             return res.status(400).json({ error: 'Erro ao atualizar usuário.' });
         }
     }
+
+    async deleteUser(req, res) {
+        try {
+            const { id } = req.params;
+            await userRepository.deleteUser(id);
+            return res.json({ message: 'Usuário excluído com sucesso.' });
+        } catch (error) {
+            return res.status(500).json({ error: 'Erro ao excluir usuário.' });
+        }
+    }
 }
 
 module.exports = new AdminController();

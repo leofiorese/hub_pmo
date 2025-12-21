@@ -24,6 +24,9 @@ import PMO from './pages/PowerBI/PMO';
 // Certifique-se que o arquivo está em: client/src/pages/Admin/Users/index.jsx
 import UsersList from './pages/Admin/Users'; 
 
+//Página do Profile 
+import Profile from './pages/Profile';
+
 // Componente para proteger rotas
 const PrivateRoute = ({ children }) => {
   const { signed, loading } = useAuth();
@@ -60,6 +63,9 @@ function App() {
               
               {/* Rota de Admin (Nova) */}
               <Route path="admin/users" element={<UsersList />} />
+
+              {/*Rota de Profile*/}
+              <Route path="/profile" element={<Profile />} />
               
               {/* Rotas de Power BI */}
               <Route path="pbi/faturamento" element={<Faturamento />} />

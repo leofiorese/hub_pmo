@@ -70,14 +70,14 @@ export default function Faturamento() {
         </Typography>
 
         {/* Botão visível apenas para Admin */}
-        {user?.role === 'admin' && (
+        {['admin', 'pmo'].includes(user?.role) && (
           <Tooltip title="Alterar Link do Relatório">
             <Button 
               startIcon={<EditIcon />} 
               variant="outlined" 
               size="small"
               onClick={() => {
-                setNewUrl(reportUrl); // Garante que o input abre com o link atual
+                setNewUrl(reportUrl);
                 setOpenDialog(true);
               }}
             >

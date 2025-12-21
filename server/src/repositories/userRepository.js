@@ -75,6 +75,22 @@ class UserRepository {
         const [rows] = await db.execute('SELECT id, name, email, role, is_verified FROM users WHERE id = ?', [id]);
         return rows[0];
     }
+
+    async deleteUser(id) {
+        try {
+            await db.execute('DELETE FROM users WHERE id = ?', [id]);
+            return true;
+        } catch (error) {
+            console.error("Erro ao deletar usuário:", error);
+            throw new Error('Erro ao deletar usuário do banco.');
+        }
+    }
+
+    async findById(id) {
+        // Busca todos os dados do usuário pelo ID
+        const [rows] = await db.execute('SELECT * FROM users WHERE id = ?', [id]);
+        return rows[0];
+    }
 }
 
 module.exports = new UserRepository();
