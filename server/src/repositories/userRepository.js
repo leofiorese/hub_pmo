@@ -40,6 +40,41 @@ class UserRepository {
             [newPasswordHash, id]
         );
     }
+
+    // NOVO: Listar todos os usuários (para a tabela do Admin)
+    async findAll() {
+        try {
+            // Trazendo apenas colunas que CERTEZA que existem
+            const [rows] = await db.execute(
+                'SELECT id, name, email, role FROM users ORDER BY name ASC'
+            );
+            return rows;
+        } catch (error) {
+            console.error("ERRO CRÍTICO NO FIND ALL:", error);
+            throw new Error('Erro ao buscar usuários no banco.');
+        }
+    }
+
+    // NOVO: Atualizar dados de um usuário (Role e/ou Senha)
+    async adminUpdateUser(id, { name, email, role, password_hash }) {
+        // Montamos a query dinamicamente dependendo se tem senha nova ou não
+        let query = 'UPDATE users SET name = ?, email = ?, role = ?';
+        let params = [name, email, role];
+
+        if (password_hash) {
+            query += ', password_hash = ?';
+            params.push(password_hash);
+        }
+
+        query += ' WHERE id = ?';
+        params.push(id);
+
+        await db.execute(query, params);
+        
+        // Retorna o usuário atualizado
+        const [rows] = await db.execute('SELECT id, name, email, role, is_verified FROM users WHERE id = ?', [id]);
+        return rows[0];
+    }
 }
 
 module.exports = new UserRepository();

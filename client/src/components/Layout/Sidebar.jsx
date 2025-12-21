@@ -7,10 +7,12 @@ import {
 import { 
   Dashboard, ExpandLess, ExpandMore, BarChart, 
   TableChart, Settings, OpenInNew, Brightness4, Brightness7,
-  ChevronLeft, ChevronRight, BusinessCenter // <--- Ícone Novo Importado
+  ChevronLeft, ChevronRight, BusinessCenter,
+  AdminPanelSettings as AdminIcon // <--- IMPORTANTE: Importamos e renomeamos aqui
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom'; // Adicionei useLocation
 import { useTheme } from '../../hooks/useTheme';
+import { useAuth } from '../../hooks/useAuth'; // <--- IMPORTANTE: Import do useAuth
 
 import logoLight from '../../assets/logo.png';
 import logoDark from '../../assets/logo_dark.png';
@@ -26,7 +28,9 @@ const Sidebar = ({
   isExpanded, toggleSidebar 
 }) => {
   const navigate = useNavigate();
+  const location = useLocation(); // Hook para saber em qual página estamos
   const { mode, toggleColorMode } = useTheme();
+  const { user } = useAuth(); // Pegando o usuário logado para verificar a role
   
   const [openPowerBI, setOpenPowerBI] = useState(false);
   const [openExcel, setOpenExcel] = useState(false);
@@ -99,6 +103,28 @@ const Sidebar = ({
           </ListItemButton>
         </Tooltip>
 
+        {/* --- ÁREA EXCLUSIVA DE ADMIN (NOVA) --- */}
+        {user?.role === 'admin' && (
+            <Tooltip title={!isExpanded ? "Gerenciar Usuários" : ""} placement="right">
+            <ListItemButton 
+                onClick={() => navigate('/admin/users')}
+                sx={{ 
+                    justifyContent: isExpanded ? 'initial' : 'center',
+                    // Destaca o item se estivermos na página de admin
+                    bgcolor: location.pathname.startsWith('/admin') ? 'action.selected' : 'transparent',
+                    borderLeft: location.pathname.startsWith('/admin') ? '4px solid' : '4px solid transparent',
+                    borderColor: 'error.main' // Vermelho para destacar admin
+                }}
+            >
+                <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center' }}>
+                <AdminIcon color="error" /> 
+                </ListItemIcon>
+                {isExpanded && <ListItemText primary="Gerenciar Usuários" />}
+            </ListItemButton>
+            </Tooltip>
+        )}
+        {/* -------------------------------------- */}
+
         {/* Item Power BI */}
         <Tooltip title={!isExpanded ? "Power BI" : ""} placement="right">
           <ListItemButton 
@@ -147,23 +173,22 @@ const Sidebar = ({
           </List>
         </Collapse>
 
-        {/* --- NOVO ITEM: PSOffice --- */}
+        {/* Item PSOffice */}
         <Tooltip title={!isExpanded ? "PSOffice" : ""} placement="right">
           <ListItemButton 
-            component="a" // Importante: comportamento de link
+            component="a" 
             href="https://psofficeapp.com.br/sandech/core/util/login.do?cdpy=7485806257916553937"
             target="_blank"
             rel="noopener noreferrer"
             sx={{ justifyContent: isExpanded ? 'initial' : 'center' }}
           >
             <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center' }}>
-              <BusinessCenter /> {/* Ícone da Maleta */}
+              <BusinessCenter /> 
             </ListItemIcon>
             {isExpanded && <ListItemText primary="PSOffice" />}
             {isExpanded && <OpenInNew color="action" sx={{ fontSize: 16, opacity: 0.6 }} />}
           </ListItemButton>
         </Tooltip>
-        {/* --------------------------- */}
 
         <Divider sx={{ my: 1 }} />
 

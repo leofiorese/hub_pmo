@@ -1,37 +1,36 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import {CssBaseline } from '@mui/material';
+import { CssBaseline } from '@mui/material';
 import { CustomThemeProvider } from './contexts/ThemeContext';
 
-// --- IMPORTAÇÕES CORRIGIDAS ---
-// 1. Importa o PROVEDOR (AuthProvider) da pasta contexts
-import { AuthProvider } from './contexts/AuthContext'; 
+// --- CONTEXTOS E HOOKS ---
+import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './hooks/useAuth';
 
-// 2. Importa o HOOK (useAuth) da pasta hooks
-import { useAuth } from './hooks/useAuth';            
-
+// --- PÁGINAS PÚBLICAS ---
 import Login from './pages/Login';
+import Register from './pages/Register';
+import ResetPassword from './pages/ResetPassword';
+
+// --- LAYOUT E PÁGINAS PRIVADAS ---
+import MainLayout from './components/Layout';
 import Dashboard from './pages/Dashboard';
-import MainLayout from './components/Layout'; 
 
 // Pages dos PowerBI's
 import Faturamento from './pages/PowerBI/Faturamento';
 import PMO from './pages/PowerBI/PMO';
 
-// Cadastro de Usuários
-
-import Register from './pages/Register';
-
-// Reset de Senha
-
-import ResetPassword from './pages/ResetPassword';
+// --- NOVA PÁGINA DE ADMIN ---
+// Certifique-se que o arquivo está em: client/src/pages/Admin/Users/index.jsx
+import UsersList from './pages/Admin/Users'; 
 
 // Componente para proteger rotas
 const PrivateRoute = ({ children }) => {
-  const { signed, loading } = useAuth(); // Aqui usamos o hook novo
+  const { signed, loading } = useAuth();
 
   if (loading) {
-    return <div>Carregando...</div>; 
+    // Você pode substituir isso por um componente de Loading (CircularProgress) mais bonito depois
+    return <div style={{ display: 'flex', justifyContent: 'center', marginTop: '50px' }}>Carregando...</div>;
   }
 
   return signed ? children : <Navigate to="/login" />;
@@ -41,20 +40,28 @@ function App() {
   return (
     <CustomThemeProvider>
       <CssBaseline />
-      {/* O AuthProvider precisa estar aqui envolvendo tudo */}
       <AuthProvider>
         <BrowserRouter>
           <Routes>
+            {/* --- ROTAS PÚBLICAS (Fora do Layout Principal) --- */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/reset-password" element={<ResetPassword />} />
 
-            <Route path="/" element={<PrivateRoute><MainLayout /></PrivateRoute>}>
+            {/* --- ROTAS PRIVADAS (Dentro do Layout Principal) --- */}
+            {/* Unificamos tudo neste bloco único */}
+            <Route path="/" element={
+              <PrivateRoute>
+                <MainLayout />
+              </PrivateRoute>
+            }>
+              {/* Rota Index (Dashboard) */}
               <Route index element={<Dashboard />} />
-            </Route>
-
-            <Route path="/" element={<PrivateRoute><MainLayout /></PrivateRoute>}>
-              <Route index element={<Dashboard />} />
+              
+              {/* Rota de Admin (Nova) */}
+              <Route path="admin/users" element={<UsersList />} />
+              
+              {/* Rotas de Power BI */}
               <Route path="pbi/faturamento" element={<Faturamento />} />
               <Route path="pbi/pmo" element={<PMO />} />
             </Route>
