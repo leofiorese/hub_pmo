@@ -2,25 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { 
   Box, Drawer, List, Typography, Divider, ListItemButton, 
   ListItemIcon, ListItemText, Collapse, Dialog, DialogTitle, 
-  DialogContent, DialogContentText, DialogActions, Button, Switch, IconButton, Tooltip
+  DialogContent, DialogContentText, DialogActions, Button, Switch, IconButton, Tooltip, TextField
 } from '@mui/material';
 import { 
   Dashboard, ExpandLess, ExpandMore, BarChart, 
-  TableChart, Settings, OpenInNew, Brightness4, Brightness7,
+  TableChart, OpenInNew, Brightness4, Brightness7,
   ChevronLeft, ChevronRight, BusinessCenter,
-  AdminPanelSettings as AdminIcon // <--- IMPORTANTE: Importamos e renomeamos aqui
+  AdminPanelSettings as AdminIcon,
+  Edit as EditIcon // <--- Novo Ícone
 } from '@mui/icons-material';
-import { useNavigate, useLocation } from 'react-router-dom'; // Adicionei useLocation
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../../hooks/useTheme';
-import { useAuth } from '../../hooks/useAuth'; // <--- IMPORTANTE: Import do useAuth
+import { useAuth } from '../../hooks/useAuth';
+import api from '../../services/api'; // <--- Import API
 
 import logoLight from '../../assets/logo.png';
 import logoDark from '../../assets/logo_dark.png';
 
-const excelTools = [
-  { title: 'Backlog', url: 'https://sandechnew.sharepoint.com/:x:/s/PMO738/IQB4-9BhruDURLPec3qeX30FAYE4bQldzMtuM9iQtKHG-fQ?e=oAlMm5' },
-  { title: "Controle ART's", url: 'https://sandechnew.sharepoint.com/:x:/s/PMO738/IQCPXC7ITrjuTr8DMABKXLRmAU67rBPVme1UTSbMAqSc1V8?e=5IOrOL' },
-  { title: 'Planilha de Faturamento', url: 'https://sandechnew.sharepoint.com/:x:/s/PMO738/IQC0VWDIEV0LQYPjoDsKhK0gAfZK3ya1wBA_YvNlmLiL9sI?e=UucQfv' }
+// Configuração APENAS dos Títulos e Chaves (URLs vêm do banco agora)
+const excelToolsConfig = [
+  { title: 'Backlog', key: 'excel_backlog' },
+  { title: "Controle ART's", key: 'excel_art' },
+  { title: 'Planilha de Faturamento', key: 'excel_faturamento' }
 ];
 
 const Sidebar = ({ 
@@ -28,22 +31,46 @@ const Sidebar = ({
   isExpanded, toggleSidebar 
 }) => {
   const navigate = useNavigate();
-  const location = useLocation(); // Hook para saber em qual página estamos
+  const location = useLocation();
   const { mode, toggleColorMode } = useTheme();
-  const { user } = useAuth(); // Pegando o usuário logado para verificar a role
+  const { user } = useAuth();
   
   const [openPowerBI, setOpenPowerBI] = useState(false);
   const [openExcel, setOpenExcel] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  
+  // Dialog de Redirecionamento (Existente)
+  const [redirectDialog, setRedirectDialog] = useState(false);
   const [targetUrl, setTargetUrl] = useState('');
 
-  // Efeito: Se o usuário minimizar a barra, fechamos os menus expansíveis
+  // Dialog de Edição (Novo)
+  const [editDialog, setEditDialog] = useState(false);
+  const [editData, setEditData] = useState({ key: '', url: '' });
+  const [saving, setSaving] = useState(false);
+
+  // Estado para guardar os links vindos do banco
+  const [links, setLinks] = useState({});
+
+  // 1. Busca os links no banco ao iniciar
   useEffect(() => {
+    fetchLinks();
+  }, []);
+
+  const fetchLinks = async () => {
+    try {
+      const response = await api.get('/links');
+      setLinks(response.data); // Guarda { psoffice: 'http...', excel_art: 'http...' }
+    } catch (error) {
+      console.error('Erro ao buscar links da sidebar', error);
+    }
+  };
+
+  useEffect(() => {
+    if (location.pathname.includes('/pbi')) setOpenPowerBI(true);
     if (!isExpanded) {
       setOpenPowerBI(false);
       setOpenExcel(false);
     }
-  }, [isExpanded]);
+  }, [isExpanded, location.pathname]);
 
   const handleGroupClick = (isOpen, setOpen) => {
     if (!isExpanded) {
@@ -54,68 +81,81 @@ const Sidebar = ({
     }
   };
 
-  const handleExcelClick = (url) => {
-    setTargetUrl(url);
-    setDialogOpen(true);
+  // Abre o link do Excel (Visualizador Comum)
+  const handleExcelClick = (key) => {
+    const url = links[key];
+    if (url) {
+        setTargetUrl(url);
+        setRedirectDialog(true);
+    } else {
+        alert('Link não configurado.');
+    }
+  };
+
+  // Abre o Modal de Edição (Admin)
+  const handleEditLink = (e, key) => {
+    e.stopPropagation(); // IMPORTANTE: Impede que o clique no lápis abra o link
+    e.preventDefault();  // Previne comportamento padrão de links
+    setEditData({ key, url: links[key] || '' });
+    setEditDialog(true);
+  };
+
+  // Salva a edição do Admin
+  const saveLink = async () => {
+    setSaving(true);
+    try {
+        await api.put(`/admin/links/${editData.key}`, { url: editData.url });
+        // Atualiza o estado local imediatamente
+        setLinks(prev => ({ ...prev, [editData.key]: editData.url }));
+        setEditDialog(false);
+    } catch (error) {
+        alert('Erro ao atualizar link.');
+    } finally {
+        setSaving(false);
+    }
   };
 
   const handleConfirmRedirect = () => {
     if (targetUrl) window.open(targetUrl, '_blank');
-    setDialogOpen(false);
+    setRedirectDialog(false);
+  };
+
+  const getButtonStyle = (path) => {
+    const isActive = location.pathname === path;
+    return {
+      justifyContent: isExpanded ? 'initial' : 'center',
+      bgcolor: isActive ? 'action.selected' : 'transparent',
+      borderLeft: '4px solid',
+      borderLeftColor: isActive ? 'error.main' : 'transparent',
+      '&:hover': { bgcolor: 'action.hover' }
+    };
   };
 
   const drawerContent = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {/* 1. Header da Logo */}
-      <Box 
-        sx={{ 
-          minHeight: 64, 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          p: 1,
-          overflow: 'hidden'
-        }} 
-      >
+      {/* Header */}
+      <Box sx={{ minHeight: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 1, overflow: 'hidden' }}>
         {isExpanded ? (
-           <img 
-             src={mode === 'dark' ? logoDark : logoLight} 
-             alt="Logo Sandech" 
-             style={{ maxWidth: '140px', height: 'auto', transition: '0.3s' }} 
-           />
+           <img src={mode === 'dark' ? logoDark : logoLight} alt="Logo" style={{ maxWidth: '140px', height: 'auto', transition: '0.3s' }} />
         ) : (
-           <Typography variant="h6" fontWeight="bold" color="primary">
-             S
-           </Typography>
+           <Typography variant="h6" fontWeight="bold" color="primary">S</Typography>
         )}
       </Box>
-      
       <Divider />
       
       <List sx={{ flexGrow: 1 }}>
-        {/* Item Visão Geral */}
         <Tooltip title={!isExpanded ? "Visão Geral" : ""} placement="right">
-          <ListItemButton onClick={() => navigate('/')} sx={{ justifyContent: isExpanded ? 'initial' : 'center' }}>
+          <ListItemButton onClick={() => navigate('/')} sx={getButtonStyle('/')}>
             <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center' }}>
-              <Dashboard color="primary"/>
+              <Dashboard color={location.pathname === '/' ? 'primary' : 'inherit'}/>
             </ListItemIcon>
             {isExpanded && <ListItemText primary="Visão Geral" />}
           </ListItemButton>
         </Tooltip>
 
-        {/* --- ÁREA EXCLUSIVA DE ADMIN (NOVA) --- */}
         {user?.role === 'admin' && (
             <Tooltip title={!isExpanded ? "Gerenciar Usuários" : ""} placement="right">
-            <ListItemButton 
-                onClick={() => navigate('/admin/users')}
-                sx={{ 
-                    justifyContent: isExpanded ? 'initial' : 'center',
-                    // Destaca o item se estivermos na página de admin
-                    bgcolor: location.pathname.startsWith('/admin') ? 'action.selected' : 'transparent',
-                    borderLeft: location.pathname.startsWith('/admin') ? '4px solid' : '4px solid transparent',
-                    borderColor: 'error.main' // Vermelho para destacar admin
-                }}
-            >
+            <ListItemButton onClick={() => navigate('/admin/users')} sx={getButtonStyle('/admin/users')}>
                 <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center' }}>
                 <AdminIcon color="error" /> 
                 </ListItemIcon>
@@ -123,14 +163,10 @@ const Sidebar = ({
             </ListItemButton>
             </Tooltip>
         )}
-        {/* -------------------------------------- */}
 
-        {/* Item Power BI */}
+        {/* --- POWER BI --- */}
         <Tooltip title={!isExpanded ? "Power BI" : ""} placement="right">
-          <ListItemButton 
-            onClick={() => handleGroupClick(openPowerBI, setOpenPowerBI)}
-            sx={{ justifyContent: isExpanded ? 'initial' : 'center' }}
-          >
+          <ListItemButton onClick={() => handleGroupClick(openPowerBI, setOpenPowerBI)} sx={{ justifyContent: isExpanded ? 'initial' : 'center' }}>
             <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center' }}>
               <BarChart />
             </ListItemIcon>
@@ -140,21 +176,18 @@ const Sidebar = ({
         </Tooltip>
         <Collapse in={openPowerBI && isExpanded} timeout="auto" unmountOnExit>
           <List component="div" disablePadding>
-            <ListItemButton sx={{ pl: 4 }} onClick={() => navigate('/pbi/faturamento')}>
+            <ListItemButton sx={{ pl: 4, ...getButtonStyle('/pbi/faturamento') }} onClick={() => navigate('/pbi/faturamento')}>
               <ListItemText primary="Faturamento" />
             </ListItemButton>
-            <ListItemButton sx={{ pl: 4 }} onClick={() => navigate('/pbi/pmo')}>
+            <ListItemButton sx={{ pl: 4, ...getButtonStyle('/pbi/pmo') }} onClick={() => navigate('/pbi/pmo')}>
               <ListItemText primary="Dashboard PMO" />
             </ListItemButton>
           </List>
         </Collapse>
 
-        {/* Item Excel */}
+        {/* --- EXCEL ONLINE (DINÂMICO) --- */}
         <Tooltip title={!isExpanded ? "Excel Online" : ""} placement="right">
-          <ListItemButton 
-            onClick={() => handleGroupClick(openExcel, setOpenExcel)}
-            sx={{ justifyContent: isExpanded ? 'initial' : 'center' }}
-          >
+          <ListItemButton onClick={() => handleGroupClick(openExcel, setOpenExcel)} sx={{ justifyContent: isExpanded ? 'initial' : 'center' }}>
             <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center' }}>
               <TableChart />
             </ListItemIcon>
@@ -164,20 +197,38 @@ const Sidebar = ({
         </Tooltip>
         <Collapse in={openExcel && isExpanded} timeout="auto" unmountOnExit>
           <List component="div" disablePadding>
-            {excelTools.map((tool) => (
-              <ListItemButton key={tool.title} sx={{ pl: 4 }} onClick={() => handleExcelClick(tool.url)}>
+            {excelToolsConfig.map((tool) => (
+              <ListItemButton 
+                key={tool.key} 
+                sx={{ pl: 4 }} 
+                onClick={() => handleExcelClick(tool.key)}
+              >
                 <ListItemText primary={tool.title} />
-                <OpenInNew color="action" sx={{ fontSize: 16, opacity: 0.6 }} />
+                
+                {/* BOTÃO DE EDIÇÃO (ADMIN) */}
+                {user?.role === 'admin' ? (
+                    <IconButton 
+                        size="small" 
+                        onClick={(e) => handleEditLink(e, tool.key)}
+                        sx={{ ml: 1, color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
+                    >
+                        <EditIcon fontSize="small" />
+                    </IconButton>
+                ) : (
+                    <OpenInNew color="action" sx={{ fontSize: 16, opacity: 0.6 }} />
+                )}
               </ListItemButton>
             ))}
           </List>
         </Collapse>
 
-        {/* Item PSOffice */}
+        {/* --- PSOFFICE (DINÂMICO) --- */}
         <Tooltip title={!isExpanded ? "PSOffice" : ""} placement="right">
           <ListItemButton 
             component="a" 
-            href="https://psofficeapp.com.br/sandech/core/util/login.do?cdpy=7485806257916553937"
+            // Se for admin e clicar no botão, também vai pro link, mas tem o lápis
+            // Usamos o link do state ou '#' se não tiver carregado
+            href={links['psoffice'] || '#'}
             target="_blank"
             rel="noopener noreferrer"
             sx={{ justifyContent: isExpanded ? 'initial' : 'center' }}
@@ -186,13 +237,23 @@ const Sidebar = ({
               <BusinessCenter /> 
             </ListItemIcon>
             {isExpanded && <ListItemText primary="PSOffice" />}
-            {isExpanded && <OpenInNew color="action" sx={{ fontSize: 16, opacity: 0.6 }} />}
+            
+            {/* BOTÃO DE EDIÇÃO (ADMIN) */}
+            {isExpanded && user?.role === 'admin' ? (
+                 <IconButton 
+                    size="small" 
+                    onClick={(e) => handleEditLink(e, 'psoffice')}
+                    sx={{ ml: 1, color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
+                >
+                    <EditIcon fontSize="small" />
+                </IconButton>
+            ) : (
+                isExpanded && <OpenInNew color="action" sx={{ fontSize: 16, opacity: 0.6 }} />
+            )}
           </ListItemButton>
         </Tooltip>
 
         <Divider sx={{ my: 1 }} />
-
-        {/* Toggle Dark Mode */}
         <Tooltip title={!isExpanded ? "Mudar Tema" : ""} placement="right">
           <ListItemButton onClick={toggleColorMode} sx={{ justifyContent: isExpanded ? 'initial' : 'center' }}>
             <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center' }}>
@@ -206,7 +267,6 @@ const Sidebar = ({
         </Tooltip>
       </List>
 
-      {/* Botão de Colapso */}
       <Divider />
       <Box sx={{ p: 1, display: 'flex', justifyContent: isExpanded ? 'flex-end' : 'center' }}>
         <IconButton onClick={toggleSidebar}>
@@ -218,40 +278,48 @@ const Sidebar = ({
 
   return (
     <Box component="nav" sx={{ width: { sm: isExpanded ? drawerWidth : miniDrawerWidth }, flexShrink: { sm: 0 }, transition: 'width 0.3s' }}>
-      <Drawer
-        variant="temporary"
-        open={mobileOpen}
-        onClose={handleDrawerToggle}
-        ModalProps={{ keepMounted: true }}
-        sx={{ display: { xs: 'block', sm: 'none' }, '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth } }}
-      >
+      <Drawer variant="temporary" open={mobileOpen} onClose={handleDrawerToggle} ModalProps={{ keepMounted: true }} sx={{ display: { xs: 'block', sm: 'none' }, '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth } }}>
         {drawerContent}
       </Drawer>
-      
-      <Drawer
-        variant="permanent"
-        open
-        sx={{
-          display: { xs: 'none', sm: 'block' },
-          '& .MuiDrawer-paper': { 
-            boxSizing: 'border-box', 
-            width: isExpanded ? drawerWidth : miniDrawerWidth,
-            transition: 'width 0.3s', 
-            overflowX: 'hidden'
-          },
-        }}
-      >
+      <Drawer variant="permanent" open sx={{ display: { xs: 'none', sm: 'block' }, '& .MuiDrawer-paper': { boxSizing: 'border-box', width: isExpanded ? drawerWidth : miniDrawerWidth, transition: 'width 0.3s', overflowX: 'hidden' } }}>
         {drawerContent}
       </Drawer>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
+      {/* DIALOG DE REDIRECIONAMENTO (EXCEL) */}
+      <Dialog open={redirectDialog} onClose={() => setRedirectDialog(false)}>
         <DialogTitle>Redirecionamento Externo</DialogTitle>
         <DialogContent>
           <DialogContentText>Você será redirecionado para o Excel Online. Deseja continuar?</DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)} color="inherit">Cancelar</Button>
+          <Button onClick={() => setRedirectDialog(false)} color="inherit">Cancelar</Button>
           <Button onClick={handleConfirmRedirect} variant="contained" autoFocus>Continuar</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* DIALOG DE EDIÇÃO DE LINK (ADMIN) */}
+      <Dialog open={editDialog} onClose={() => setEditDialog(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Editar Link</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            Cole a nova URL abaixo para atualizar este link no sistema.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="URL do Link"
+            type="url"
+            fullWidth
+            variant="outlined"
+            value={editData.url}
+            onChange={(e) => setEditData({ ...editData, url: e.target.value })}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditDialog(false)} color="inherit">Cancelar</Button>
+          <Button onClick={saveLink} variant="contained" disabled={saving}>
+            {saving ? 'Salvando...' : 'Salvar Alteração'}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
