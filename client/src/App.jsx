@@ -27,6 +27,9 @@ import UsersList from './pages/Admin/Users';
 //Página do Profile 
 import Profile from './pages/Profile';
 
+//Página de Aprovações de Usuário
+import Approvals from './pages/Admin/Approvals';
+
 // Componente para proteger rotas
 const PrivateRoute = ({ children }) => {
   const { signed, loading } = useAuth();
@@ -63,6 +66,7 @@ function App() {
               
               {/* Rota de Admin (Nova) */}
               <Route path="admin/users" element={<UsersList />} />
+              <Route path="/admin/approvals" element={<Approvals />} />
 
               {/*Rota de Profile*/}
               <Route path="/profile" element={<Profile />} />

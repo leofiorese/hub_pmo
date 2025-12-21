@@ -14,6 +14,10 @@ router.get('/users', checkRole(['admin']), adminController.listUsers);
 router.put('/users/:id', checkRole(['admin']), adminController.updateUser);
 router.delete('/users/:id', checkRole(['admin']), adminController.deleteUser);
 
+// Rotas de Aprovação 
+router.get('/approvals', checkRole(['admin']), adminController.listPendingUsers);
+router.put('/approvals/:id', checkRole(['admin']), adminController.approveUser);
+
 // --- ROTAS DE LINKS (ADMIN + PMO) ---
 // Agora 'admin' E 'pmo' podem editar links
 router.put('/links/:key', checkRole(['admin', 'pmo']), linkController.updateLink);

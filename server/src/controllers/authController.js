@@ -13,14 +13,23 @@ class AuthController {
             return res.json(result);
 
         } catch (error) {
-            // Se for erro de negócio (senha errada), retorna 401
-            if (error.message === 'Usuário não encontrado.' || error.message === 'Senha incorreta.') {
+            // 1. Erro de Credenciais (401)
+            if (error.message === 'Usuário não encontrado.' || error.message === 'Usuário ou senha inválidos.') {
                 return res.status(401).json({ error: 'Credenciais inválidas.' });
             }
+            
+            // 2. NOVO: Erro de Aprovação Pendente (403 Forbidden)
+            // Deixa passar a mensagem exata que definimos no Service
+            if (error.message === 'Cadastro pendente de aprovação pelo Administrador.') {
+                return res.status(403).json({ error: error.message });
+            }
+
+            // 3. Outros erros (500)
             console.error(error);
             return res.status(500).json({ error: 'Erro interno do servidor.' });
         }
     }
+
     async register(req, res) {
         try {
             const user = await authService.registerUser(req.body);
@@ -30,19 +39,16 @@ class AuthController {
         }
     }
 
-    // NOVO: Esqueceu a senha
     async forgotPassword(req, res) {
         try {
             const { email } = req.body;
             const result = await authService.sendRecoveryEmail(email);
             return res.json(result);
         } catch (error) {
-            // Em forgot password, evitamos dar muito detalhe de erro por segurança
             return res.status(500).json({ error: 'Erro ao processar solicitação.' });
         }
     }
 
-    // NOVO: Resetar senha (usando o token)
     async resetPassword(req, res) {
         try {
             const { token, newPassword } = req.body;

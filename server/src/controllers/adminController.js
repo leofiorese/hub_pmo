@@ -36,6 +36,26 @@ class AdminController {
         }
     }
 
+    async listPendingUsers(req, res) {
+        try {
+            const users = await userRepository.findPending();
+            return res.json(users);
+        } catch (error) {
+            return res.status(500).json({ error: 'Erro ao buscar solicitações.' });
+        }
+    }
+
+    // Aprova usuário
+    async approveUser(req, res) {
+        try {
+            const { id } = req.params;
+            await userRepository.approveUser(id);
+            return res.json({ message: 'Usuário aprovado com sucesso!' });
+        } catch (error) {
+            return res.status(500).json({ error: 'Erro ao aprovar usuário.' });
+        }
+    }
+
     async deleteUser(req, res) {
         try {
             const { id } = req.params;

@@ -76,6 +76,19 @@ class UserRepository {
         return rows[0];
     }
 
+    async findPending() {
+        const [rows] = await db.execute(
+            'SELECT id, name, email, role FROM users WHERE approved = FALSE ORDER BY created_at DESC'
+        );
+        return rows;
+    }
+
+    // Aprova um usuário
+    async approveUser(id) {
+        await db.execute('UPDATE users SET approved = TRUE WHERE id = ?', [id]);
+        return true;
+    }
+
     async deleteUser(id) {
         try {
             await db.execute('DELETE FROM users WHERE id = ?', [id]);

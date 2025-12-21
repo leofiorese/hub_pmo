@@ -1,10 +1,10 @@
 const userRepository = require('../repositories/userRepository');
 const bcrypt = require('bcryptjs');
-const crypto = require('crypto'); // Nativo do Node.js para gerar tokens aleatórios
+const crypto = require('crypto'); 
 const jwt = require('jsonwebtoken');
 
 class AuthService {
-    // --- LÓGICA DE LOGIN (ADICIONADA E AJUSTADA) ---
+    // --- LÓGICA DE LOGIN ---
     async authenticate(email, password) {
         const user = await userRepository.findByEmail(email);
 
@@ -12,8 +12,15 @@ class AuthService {
             throw new Error('Usuário ou senha inválidos.');
         }
 
-        // AJUSTE CRÍTICO: Comparamos a senha digitada com 'password_hash' do banco
-        // (Se usássemos user.password aqui, daria erro pois essa coluna não existe no select)
+        // --- NOVO: VERIFICA SE O USUÁRIO ESTÁ APROVADO ---
+        // Se a coluna 'approved' for 0 (false), bloqueia o acesso.
+        // Nota: O banco retorna 0 ou 1, que o JS trata como false/true.
+        if (!user.approved) {
+            throw new Error('Cadastro pendente de aprovação pelo Administrador.');
+        }
+        // -------------------------------------------------
+
+        // Compara senha com o hash do banco
         const isValid = await bcrypt.compare(password, user.password_hash);
 
         if (!isValid) {
@@ -23,15 +30,14 @@ class AuthService {
         // Gera o token JWT
         const token = jwt.sign(
             { 
-            id: user.id,      // <--- CERTIFIQUE-SE QUE ESTA LINHA EXISTE
-            role: user.role,  // <--- CERTIFIQUE-SE QUE ESTA LINHA EXISTE
+            id: user.id,      
+            role: user.role,  
             name: user.name 
             }, 
             process.env.JWT_SECRET, 
             { expiresIn: '1d' }
         );
 
-        // Remove o hash do objeto antes de retornar para o frontend (Segurança)
         const { password_hash, ...userWithoutPassword } = user;
 
         return {
@@ -40,7 +46,7 @@ class AuthService {
         };
     }
 
-    // --- LÓGICA DE CADASTRO (MANTIDA) ---
+    // --- LÓGICA DE CADASTRO ---
     async registerUser(data) {
         const userExists = await userRepository.findByEmail(data.email);
 
@@ -52,10 +58,10 @@ class AuthService {
             throw new Error('Este e-mail já está cadastrado.');
         }
 
-        // Criptografa a senha antes de salvar
         const hashedPassword = await bcrypt.hash(data.password, 10);
 
-        // O repositório vai pegar esse 'password' e inserir na coluna 'password_hash'
+        // Ao criar, o banco de dados usará o DEFAULT FALSE na coluna approved
+        // Então o usuário nasce "pendente" automaticamente.
         const newId = await userRepository.create({
             ...data,
             password: hashedPassword
@@ -64,26 +70,20 @@ class AuthService {
         return { id: newId, name: data.name, email: data.email };
     }
 
-    // --- LÓGICA DE ESQUECEU A SENHA (MANTIDA) ---
+    // --- LÓGICA DE ESQUECEU A SENHA ---
     async sendRecoveryEmail(email) {
         const user = await userRepository.findByEmail(email);
         
-        // Segurança: Se o usuário não existe, não retorne erro para não vazar quem tem conta.
         if (!user) {
             return { message: 'Se o e-mail existir, o link foi enviado.' };
         }
 
-        // 1. Gera um token aleatório e seguro
         const token = crypto.randomBytes(20).toString('hex');
-
-        // 2. Define expiração (1 hora a partir de agora)
         const now = new Date();
         now.setHours(now.getHours() + 1);
 
-        // 3. Salva no banco
         await userRepository.saveResetToken(email, token, now);
 
-        // 4. ENVIO DE E-MAIL (SIMULADO)
         const resetLink = `http://localhost:5173/reset-password?token=${token}`;
         
         console.log('==================================================');
@@ -94,7 +94,7 @@ class AuthService {
         return { message: 'Link de recuperação enviado (verifique o console).' };
     }
 
-    // --- LÓGICA DE REDEFINIR A SENHA (MANTIDA) ---
+    // --- LÓGICA DE REDEFINIR A SENHA ---
     async resetPassword(token, newPassword) {
         const user = await userRepository.findByToken(token);
         if (!user) {
