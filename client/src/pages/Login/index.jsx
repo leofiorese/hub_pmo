@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { 
   Box, Container, Paper, Typography, TextField, Button, Alert, CircularProgress, 
-  Grid, Link as MuiLink, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions 
+  Link as MuiLink, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions 
 } from '@mui/material';
 import { useAuth } from '../../hooks/useAuth';
-import { useNavigate, Link } from 'react-router-dom'; // Import do Link do router
+import { useNavigate, Link } from 'react-router-dom';
 
-import { useTheme } from '../../hooks/useTheme'; // Para saber se é dark/light
+import { useTheme } from '../../hooks/useTheme'; 
 import logoLight from '../../assets/logo.png';
 import logoDark from '../../assets/logo_dark.png';
 
@@ -18,15 +18,41 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loadingLocal, setLoadingLocal] = useState(false);
   
-  // Estados para recuperação de senha
   const [forgotOpen, setForgotOpen] = useState(false);
   const [recoveryEmail, setRecoveryEmail] = useState('');
 
   const { signIn } = useAuth();
   const navigate = useNavigate();
   
-  // --- USO DO TEMA ---
-  const { mode } = useTheme(); // Pega o modo atual (light ou dark)
+  const { mode } = useTheme(); 
+
+  // --- NOVO: Estilo personalizado para os Inputs no Dark Mode ---
+  const customInputStyle = {
+    // Cor do texto digitado
+    '& .MuiInputBase-input': { 
+      color: mode === 'dark' ? '#fff' : 'inherit' 
+    },
+    // Cor do Label (Título do campo)
+    '& .MuiInputLabel-root': { 
+      color: mode === 'dark' ? '#b0bec5' : 'inherit' 
+    },
+    // Cor do Label quando focado
+    '& .MuiInputLabel-root.Mui-focused': { 
+      color: mode === 'dark' ? '#fff' : 'primary.main' 
+    },
+    // Cor das bordas e ícones
+    '& .MuiOutlinedInput-root': {
+      '& fieldset': {
+        borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+      },
+      '&:hover fieldset': {
+        borderColor: mode === 'dark' ? '#fff' : 'rgba(0, 0, 0, 0.87)',
+      },
+    },
+    '& .MuiSvgIcon-root': {
+      color: mode === 'dark' ? '#b0bec5' : 'inherit'
+    }
+  };
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -46,7 +72,6 @@ export default function Login() {
 
   const handleRecoverySubmit = async () => {
     try {
-      // ESTA LINHA É A QUE CHAMA O BACKEND
       await api.post('/auth/forgot-password', { email: recoveryEmail });
       
       alert('Se o e-mail existir, enviamos um link de recuperação (Olhe o console do backend).');
@@ -65,7 +90,6 @@ export default function Login() {
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center', 
-        // Agora o fundo respeita o tema (Cinza claro ou Preto suave)
         bgcolor: 'background.default' 
       }}
     >
@@ -77,23 +101,22 @@ export default function Login() {
             display: 'flex', 
             flexDirection: 'column', 
             alignItems: 'center', 
-            borderRadius: 2 
+            borderRadius: 2,
+            bgcolor: 'background.paper' // Garante a cor correta do cartão
           }}
         >
           
-          {/* --- ÁREA DA LOGO --- */}
           <Box sx={{ mb: 3, textAlign: 'center' }}>
             <img 
               src={mode === 'dark' ? logoDark : logoLight} 
               alt="Sandech Engenharia" 
               style={{ 
-                maxWidth: '200px', // Ajuste o tamanho conforme necessário
+                maxWidth: '200px', 
                 height: 'auto',
                 display: 'block' 
               }} 
             />
           </Box>
-          {/* -------------------- */}
 
           <Typography component="h1" variant="h5" color="textPrimary" sx={{ fontWeight: 500, mb: 3 }}>
             Acesso ao PMO HUB
@@ -106,11 +129,13 @@ export default function Login() {
               margin="normal" required fullWidth label="E-mail Corporativo"
               name="email" autoComplete="email" autoFocus
               value={email} onChange={(e) => setEmail(e.target.value)}
+              sx={customInputStyle} // Aplicando o estilo aqui
             />
             <TextField
               margin="normal" required fullWidth label="Senha"
               name="password" type="password" autoComplete="current-password"
               value={password} onChange={(e) => setPassword(e.target.value)}
+              sx={customInputStyle} // Aplicando o estilo aqui
             />
             
             <Button
@@ -120,17 +145,29 @@ export default function Login() {
               {loadingLocal ? <CircularProgress size={24} color="inherit" /> : 'Entrar'}
             </Button>
             
-            {/* Links Auxiliares (Com o espaçamento corrigido) */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', mt: 2 }}>
               <MuiLink 
                 component="button" type="button" variant="body2" 
                 onClick={() => setForgotOpen(true)} underline="hover"
+                // Ajuste de cor condicional: Cinza claro no Dark, Vermelho no Light
+                sx={{ color: mode === 'dark' ? 'text.secondary' : 'primary.main' }}
               >
                 Esqueceu a senha?
               </MuiLink>
 
               <Link to="/register" style={{ textDecoration: 'none' }}>
-                <Typography variant="body2" color="primary" sx={{ fontWeight: 500, '&:hover': { textDecoration: 'underline' } }}>
+                <Typography 
+                  variant="body2" 
+                  // Ajuste de cor condicional
+                  sx={{ 
+                    fontWeight: 500, 
+                    color: mode === 'dark' ? 'text.secondary' : 'primary.main',
+                    '&:hover': { 
+                      textDecoration: 'underline', 
+                      color: mode === 'dark' ? '#fff' : 'primary.dark' 
+                    } 
+                  }}
+                >
                   Cadastrar-se
                 </Typography>
               </Link>
@@ -139,11 +176,10 @@ export default function Login() {
         </Paper>
         
         <Typography variant="caption" display="block" align="center" sx={{ mt: 2, color: 'text.secondary' }}>
-          &copy; {new Date().getFullYear()}  SANDECH Consultoria em Engenharia e Gestão Ltda..
+          &copy; {new Date().getFullYear()}  SANDECH Consultoria em Engenharia e Gestão Ltda.
         </Typography>
       </Container>
 
-      {/* Modal de Recuperação (Igual ao anterior) */}
       <Dialog open={forgotOpen} onClose={() => setForgotOpen(false)}>
         <DialogTitle>Recuperar Senha</DialogTitle>
         <DialogContent>

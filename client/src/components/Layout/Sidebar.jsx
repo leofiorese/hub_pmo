@@ -7,7 +7,7 @@ import {
 import { 
   Dashboard, ExpandLess, ExpandMore, BarChart, 
   TableChart, Settings, OpenInNew, Brightness4, Brightness7,
-  ChevronLeft, ChevronRight // Ícones novos
+  ChevronLeft, ChevronRight, BusinessCenter // <--- Ícone Novo Importado
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../hooks/useTheme';
@@ -23,7 +23,7 @@ const excelTools = [
 
 const Sidebar = ({ 
   mobileOpen, handleDrawerToggle, drawerWidth, miniDrawerWidth, 
-  isExpanded, toggleSidebar // Recebendo as novas props
+  isExpanded, toggleSidebar 
 }) => {
   const navigate = useNavigate();
   const { mode, toggleColorMode } = useTheme();
@@ -33,7 +33,7 @@ const Sidebar = ({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [targetUrl, setTargetUrl] = useState('');
 
-  // Efeito: Se o usuário minimizar a barra, fechamos os menus expansíveis para não bugar o visual
+  // Efeito: Se o usuário minimizar a barra, fechamos os menus expansíveis
   useEffect(() => {
     if (!isExpanded) {
       setOpenPowerBI(false);
@@ -41,10 +41,8 @@ const Sidebar = ({
     }
   }, [isExpanded]);
 
-  // Função auxiliar para lidar com cliques nos grupos quando minimizado
   const handleGroupClick = (isOpen, setOpen) => {
     if (!isExpanded) {
-      // Se estiver minimizado e clicar no ícone, expande a barra primeiro
       toggleSidebar();
       setOpen(true);
     } else {
@@ -62,7 +60,6 @@ const Sidebar = ({
     setDialogOpen(false);
   };
 
-  // Conteúdo interno da sidebar
   const drawerContent = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* 1. Header da Logo */}
@@ -73,7 +70,7 @@ const Sidebar = ({
           alignItems: 'center', 
           justifyContent: 'center',
           p: 1,
-          overflow: 'hidden' // Impede logo de vazar quando pequeno
+          overflow: 'hidden'
         }} 
       >
         {isExpanded ? (
@@ -83,7 +80,6 @@ const Sidebar = ({
              style={{ maxWidth: '140px', height: 'auto', transition: '0.3s' }} 
            />
         ) : (
-           // Quando minimizado, mostra só a primeira letra ou um ícone pequeno
            <Typography variant="h6" fontWeight="bold" color="primary">
              S
            </Typography>
@@ -93,7 +89,7 @@ const Sidebar = ({
       <Divider />
       
       <List sx={{ flexGrow: 1 }}>
-        {/* Item Simples */}
+        {/* Item Visão Geral */}
         <Tooltip title={!isExpanded ? "Visão Geral" : ""} placement="right">
           <ListItemButton onClick={() => navigate('/')} sx={{ justifyContent: isExpanded ? 'initial' : 'center' }}>
             <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center' }}>
@@ -103,7 +99,7 @@ const Sidebar = ({
           </ListItemButton>
         </Tooltip>
 
-        {/* Item Power BI (Expansível) */}
+        {/* Item Power BI */}
         <Tooltip title={!isExpanded ? "Power BI" : ""} placement="right">
           <ListItemButton 
             onClick={() => handleGroupClick(openPowerBI, setOpenPowerBI)}
@@ -116,7 +112,6 @@ const Sidebar = ({
             {isExpanded && (openPowerBI ? <ExpandLess /> : <ExpandMore />)}
           </ListItemButton>
         </Tooltip>
-        {/* Submenu só renderiza se estiver expandido (UX) */}
         <Collapse in={openPowerBI && isExpanded} timeout="auto" unmountOnExit>
           <List component="div" disablePadding>
             <ListItemButton sx={{ pl: 4 }} onClick={() => navigate('/pbi/faturamento')}>
@@ -128,7 +123,7 @@ const Sidebar = ({
           </List>
         </Collapse>
 
-        {/* Item Excel (Expansível) */}
+        {/* Item Excel */}
         <Tooltip title={!isExpanded ? "Excel Online" : ""} placement="right">
           <ListItemButton 
             onClick={() => handleGroupClick(openExcel, setOpenExcel)}
@@ -152,6 +147,24 @@ const Sidebar = ({
           </List>
         </Collapse>
 
+        {/* --- NOVO ITEM: PSOffice --- */}
+        <Tooltip title={!isExpanded ? "PSOffice" : ""} placement="right">
+          <ListItemButton 
+            component="a" // Importante: comportamento de link
+            href="https://psofficeapp.com.br/sandech/core/util/login.do?cdpy=7485806257916553937"
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{ justifyContent: isExpanded ? 'initial' : 'center' }}
+          >
+            <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center' }}>
+              <BusinessCenter /> {/* Ícone da Maleta */}
+            </ListItemIcon>
+            {isExpanded && <ListItemText primary="PSOffice" />}
+            {isExpanded && <OpenInNew color="action" sx={{ fontSize: 16, opacity: 0.6 }} />}
+          </ListItemButton>
+        </Tooltip>
+        {/* --------------------------- */}
+
         <Divider sx={{ my: 1 }} />
 
         {/* Toggle Dark Mode */}
@@ -168,7 +181,7 @@ const Sidebar = ({
         </Tooltip>
       </List>
 
-      {/* Botão de Colapso (Fixo no rodapé da sidebar) */}
+      {/* Botão de Colapso */}
       <Divider />
       <Box sx={{ p: 1, display: 'flex', justifyContent: isExpanded ? 'flex-end' : 'center' }}>
         <IconButton onClick={toggleSidebar}>
@@ -180,7 +193,6 @@ const Sidebar = ({
 
   return (
     <Box component="nav" sx={{ width: { sm: isExpanded ? drawerWidth : miniDrawerWidth }, flexShrink: { sm: 0 }, transition: 'width 0.3s' }}>
-      {/* Mobile Drawer (Sempre funciona igual, não minimiza) */}
       <Drawer
         variant="temporary"
         open={mobileOpen}
@@ -191,7 +203,6 @@ const Sidebar = ({
         {drawerContent}
       </Drawer>
       
-      {/* Desktop Drawer (Controlado por isExpanded) */}
       <Drawer
         variant="permanent"
         open
@@ -200,8 +211,8 @@ const Sidebar = ({
           '& .MuiDrawer-paper': { 
             boxSizing: 'border-box', 
             width: isExpanded ? drawerWidth : miniDrawerWidth,
-            transition: 'width 0.3s', // Animação suave
-            overflowX: 'hidden'       // Evita barra de rolagem horizontal durante animação
+            transition: 'width 0.3s', 
+            overflowX: 'hidden'
           },
         }}
       >
