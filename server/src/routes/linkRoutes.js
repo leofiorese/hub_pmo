@@ -17,4 +17,10 @@ router.post('/', linkController.addLink);
 // A rota final será: /api/links/:key
 router.get('/:key', linkController.getLink);
 
+// Atualizar (Admin/PMO)
+router.put('/:key', linkController.updateLink);
+
+// Deletar (Admin/PMO)
+router.delete('/:key', linkController.deleteLink);
+
 module.exports = router;

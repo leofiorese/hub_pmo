@@ -14,7 +14,8 @@ import {
   PersonAdd as ApprovalIcon,
   Person as PersonIcon,
   Link as LinkIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../../hooks/useTheme';
@@ -47,9 +48,11 @@ const Sidebar = ({
   const [redirectDialog, setRedirectDialog] = useState(false);
   const [targetUrl, setTargetUrl] = useState('');
 
+  // EDIT STATE
   const [editDialog, setEditDialog] = useState(false);
-  const [editData, setEditData] = useState({ key: '', url: '' });
+  const [editData, setEditData] = useState({ key: '', title: '', url: '', category: '' });
 
+  // ADD STATE
   const [addLinkDialog, setAddLinkDialog] = useState(false);
   const [newLinkData, setNewLinkData] = useState({ title: '', url: '', category: 'pbi' });
 
@@ -67,7 +70,7 @@ const Sidebar = ({
       const response = await api.get('/links');
       setLinksList(response.data);
 
-      // Criar mapa para acesso rápido (legacy support para psoffice e pbi hardcoded)
+      // Criar mapa para acesso rápido 
       const map = {};
       response.data.forEach(l => {
         map[l.link_key] = l.url;
@@ -112,30 +115,67 @@ const Sidebar = ({
   };
 
   const handlePbiClick = (key) => {
-    // Se for os hardcoded antigos, navega direto
     if (key === 'pbi_faturamento') navigate('/pbi/faturamento');
     else if (key === 'pbi_pmo') navigate('/pbi/pmo');
-    // Se for novo
     else navigate(`/pbi/${key}`);
   };
 
-  // --- Edit Link (Legacy) ---
-  const handleEditLink = (e, key) => {
+  //Helper Categoria
+  const getCategoryFromKey = (key) => {
+    if (key.startsWith('pbi_')) return 'pbi';
+    if (key.startsWith('excel_')) return 'excel';
+    if (key.startsWith('custom_')) return 'custom';
+    return 'custom'; // fallback
+  }
+
+  // --- Edit Link ---
+  const handleEditLink = (e, link) => {
     e.stopPropagation(); e.preventDefault();
-    setEditData({ key, url: linksMap[key] || '' });
+    // Se link for string (legacy hardcoded call), precisamos buscar do linkList ou criar dummy
+    let data = {};
+    if (typeof link === 'string') {
+      const found = linksList.find(l => l.link_key === link);
+      if (found) data = { ...found, category: getCategoryFromKey(found.link_key) };
+      else data = { key: link, url: linksMap[link] || '', title: 'Link', category: getCategoryFromKey(link) };
+    } else {
+      data = { ...link, key: link.link_key, category: getCategoryFromKey(link.link_key) };
+    }
+    setEditData(data);
     setEditDialog(true);
   };
 
   const saveEditLink = async () => {
+    if (!editData.title || !editData.url) return alert("Preencha todos os campos");
     setSaving(true);
     try {
-      await api.put(`/admin/links/${editData.key}`, { url: editData.url });
-      fetchLinks(); // Recarrega tudo
+      await api.put(`/links/${editData.key}`, {
+        title: editData.title,
+        url: editData.url,
+        category: editData.category
+      });
+      fetchLinks();
       setEditDialog(false);
+      alert('Atualizado com sucesso!');
     } catch (error) { alert('Erro ao atualizar link.'); } finally { setSaving(false); }
   };
 
-  // --- Add Link (New) ---
+  const handleDeleteLink = async () => {
+    if (!window.confirm("Tem certeza que deseja EXCLUIR este link?")) return;
+    setSaving(true);
+    try {
+      await api.delete(`/links/${editData.key}`);
+      fetchLinks();
+      setEditDialog(false);
+      alert('Link excluído!');
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao excluir");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // --- Add Link ---
   const handleAddLink = async () => {
     if (!newLinkData.title || !newLinkData.url) return alert("Preencha título e URL");
     setSaving(true);
@@ -170,6 +210,17 @@ const Sidebar = ({
   const pbiLinks = linksList.filter(l => l.link_key.startsWith('pbi_') && l.link_key !== 'pbi_faturamento' && l.link_key !== 'pbi_pmo');
   const excelLinks = linksList.filter(l => l.link_key.startsWith('excel_'));
   const customLinks = linksList.filter(l => l.link_key.startsWith('custom_'));
+
+  const renderEditButton = (link) => {
+    if (['admin', 'pmo'].includes(user?.role)) {
+      return (
+        <IconButton size="small" onClick={(e) => handleEditLink(e, link)} sx={{ ml: 1, color: 'text.secondary', '&:hover': { color: 'primary.main' } }}>
+          <EditIcon fontSize="small" />
+        </IconButton>
+      )
+    }
+    return null;
+  }
 
   const drawerContent = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -210,6 +261,7 @@ const Sidebar = ({
             {/* Hardcoded (Legacy/Priority) */}
             <ListItemButton sx={{ pl: 4, ...getButtonStyle('/pbi/faturamento') }} onClick={() => handlePbiClick('pbi_faturamento')}>
               <ListItemText primary="Faturamento" />
+              {/* Opção de editar hardcoded legacy se necessário, mas pode bugar se não tiver no banco */}
             </ListItemButton>
             <ListItemButton sx={{ pl: 4, ...getButtonStyle('/pbi/pmo') }} onClick={() => handlePbiClick('pbi_pmo')}>
               <ListItemText primary="Dashboard PMO" />
@@ -218,6 +270,7 @@ const Sidebar = ({
             {pbiLinks.map(link => (
               <ListItemButton key={link.link_key} sx={{ pl: 4, ...getButtonStyle(`/pbi/${link.link_key}`) }} onClick={() => handlePbiClick(link.link_key)}>
                 <ListItemText primary={link.title} />
+                {renderEditButton(link)}
               </ListItemButton>
             ))}
           </List>
@@ -238,11 +291,7 @@ const Sidebar = ({
             {excelLinks.map((link) => (
               <ListItemButton key={link.link_key} sx={{ pl: 4 }} onClick={() => handleExternalLinkClick(link.url)}>
                 <ListItemText primary={link.title} />
-                {['admin', 'pmo'].includes(user?.role) && (
-                  <IconButton size="small" onClick={(e) => handleEditLink(e, link.link_key)} sx={{ ml: 1, color: 'text.secondary', '&:hover': { color: 'primary.main' } }}>
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                )}
+                {renderEditButton(link)}
               </ListItemButton>
             ))}
             {excelLinks.length === 0 && <ListItemText sx={{ pl: 4, fontStyle: 'italic', color: 'text.secondary' }} primary="Nenhum link" />}
@@ -264,37 +313,12 @@ const Sidebar = ({
             {customLinks.map((link) => (
               <ListItemButton key={link.link_key} sx={{ pl: 4 }} onClick={() => handleExternalLinkClick(link.url)}>
                 <ListItemText primary={link.title} />
-                {['admin', 'pmo'].includes(user?.role) && (
-                  <IconButton size="small" onClick={(e) => handleEditLink(e, link.link_key)} sx={{ ml: 1, color: 'text.secondary', '&:hover': { color: 'primary.main' } }}>
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                )}
+                {renderEditButton(link)}
               </ListItemButton>
             ))}
             {customLinks.length === 0 && <ListItemText sx={{ pl: 4, fontStyle: 'italic', color: 'text.secondary' }} primary="Nenhum link" />}
           </List>
         </Collapse>
-
-        {/* PSOffice (Legacy) */}
-        <Tooltip title={!isExpanded ? "PSOffice" : ""} placement="right">
-          <ListItemButton
-            component="a"
-            href={linksMap['psoffice'] || '#'}
-            target="_blank"
-            rel="noopener noreferrer"
-            sx={{ justifyContent: isExpanded ? 'initial' : 'center' }}
-          >
-            <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center' }}>
-              <BusinessCenter />
-            </ListItemIcon>
-            {isExpanded && <ListItemText primary="PSOffice" />}
-            {isExpanded && ['admin', 'pmo'].includes(user?.role) ? (
-              <IconButton size="small" onClick={(e) => handleEditLink(e, 'psoffice')} sx={{ ml: 1, color: 'text.secondary', '&:hover': { color: 'primary.main' } }}>
-                <EditIcon fontSize="small" />
-              </IconButton>
-            ) : (isExpanded && <OpenInNew color="action" sx={{ fontSize: 16, opacity: 0.6 }} />)}
-          </ListItemButton>
-        </Tooltip>
 
         <Divider sx={{ my: 2 }} />
 
@@ -389,11 +413,47 @@ const Sidebar = ({
         <DialogActions><Button onClick={() => setRedirectDialog(false)} color="inherit">Cancelar</Button><Button onClick={handleConfirmRedirect} variant="contained" autoFocus>Continuar</Button></DialogActions>
       </Dialog>
 
-      {/* Edit Dialog */}
+      {/* Edit Dialog (UPDATED) */}
       <Dialog open={editDialog} onClose={() => setEditDialog(false)} fullWidth maxWidth="sm">
         <DialogTitle>Editar Link</DialogTitle>
-        <DialogContent><DialogContentText sx={{ mb: 2 }}>Cole a nova URL.</DialogContentText><TextField autoFocus margin="dense" label="URL do Link" type="url" fullWidth variant="outlined" value={editData.url} onChange={(e) => setEditData({ ...editData, url: e.target.value })} /></DialogContent>
-        <DialogActions><Button onClick={() => setEditDialog(false)} color="inherit">Cancelar</Button><Button onClick={saveEditLink} variant="contained" disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</Button></DialogActions>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            <TextField
+              label="Título"
+              fullWidth
+              value={editData.title}
+              onChange={(e) => setEditData({ ...editData, title: e.target.value })}
+            />
+            <TextField
+              label="URL do Link"
+              type="url"
+              fullWidth
+              value={editData.url}
+              onChange={(e) => setEditData({ ...editData, url: e.target.value })}
+            />
+            <FormControl fullWidth>
+              <InputLabel>Categoria</InputLabel>
+              <Select
+                value={editData.category}
+                label="Categoria"
+                onChange={(e) => setEditData({ ...editData, category: e.target.value })}
+              >
+                <MenuItem value="pbi">Power BI</MenuItem>
+                <MenuItem value="excel">Excel Online</MenuItem>
+                <MenuItem value="custom">Link Independente</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'space-between', px: 3, pb: 2 }}>
+          <Button onClick={handleDeleteLink} variant="outlined" color="error" startIcon={<DeleteIcon />}>
+            Excluir
+          </Button>
+          <Box>
+            <Button onClick={() => setEditDialog(false)} color="inherit" sx={{ mr: 1 }}>Cancelar</Button>
+            <Button onClick={saveEditLink} variant="contained" disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</Button>
+          </Box>
+        </DialogActions>
       </Dialog>
 
       {/* Add Link Dialog */}

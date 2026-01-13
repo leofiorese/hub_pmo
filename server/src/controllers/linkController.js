@@ -17,17 +17,47 @@ class LinkController {
     async updateLink(req, res) {
         try {
             const { key } = req.params;
-            const { url } = req.body;
+            const { title, url, category } = req.body;
 
-            if (!url) return res.status(400).json({ error: 'URL é obrigatória' });
+            // Validação básica
+            if (!url || !title || !category) return res.status(400).json({ error: 'Dados incompletos: title, url e category são obrigatórios' });
 
-            const updated = await linkRepository.updateLink(key, url);
+            // Determinar novo prefixo baseado na categoria
+            let prefix = '';
+            if (category === 'pbi') prefix = 'pbi_';
+            else if (category === 'excel') prefix = 'excel_';
+            else if (category === 'custom') prefix = 'custom_';
+            else return res.status(400).json({ error: 'Categoria inválida' });
+
+            // Verificar se a categoria mudou para gerar nova chave
+            // Se a chave atual NÃO começa com o prefixo da nova categoria, então mudou.
+            let newKey = key;
+            if (!key.startsWith(prefix)) {
+                // Mudou de categoria, gera nova chave
+                newKey = `${prefix}${Date.now()}`;
+            }
+
+            const updated = await linkRepository.updateLink(key, newKey, title, url);
             return res.json(updated);
         } catch (error) {
+            console.error(error);
             return res.status(500).json({ error: 'Erro ao atualizar link' });
         }
     }
 
+    // DELETE /api/admin/links/:key
+    async deleteLink(req, res) {
+        try {
+            const { key } = req.params;
+            await linkRepository.deleteLink(key);
+            return res.status(204).send();
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ error: 'Erro ao deletar link' });
+        }
+    }
+
+    // GET /api/links
     async listAll(req, res) {
         try {
             const links = await linkRepository.findAll();
