@@ -17,8 +17,6 @@ import MainLayout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 
 // Pages dos PowerBI's
-import Faturamento from './pages/PowerBI/Faturamento';
-import PMO from './pages/PowerBI/PMO';
 import DynamicPowerBI from './pages/PowerBI/DynamicPowerBI';
 
 // --- NOVA PÁGINA DE ADMIN ---
@@ -73,8 +71,7 @@ function App() {
               <Route path="/profile" element={<Profile />} />
 
               {/* Rotas de Power BI */}
-              <Route path="pbi/faturamento" element={<Faturamento />} />
-              <Route path="pbi/pmo" element={<PMO />} />
+              {/* Todas as rotas PBI agora usam o componente dinâmico */}
               <Route path="pbi/:key" element={<DynamicPowerBI />} />
             </Route>
 

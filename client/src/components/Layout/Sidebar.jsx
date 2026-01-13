@@ -63,7 +63,7 @@ const Sidebar = ({
     if (user?.role === 'admin') {
       fetchPendingCount();
     }
-  }, [user]);
+  }, [user, location.pathname]);
 
   const fetchLinks = async () => {
     try {
@@ -115,9 +115,7 @@ const Sidebar = ({
   };
 
   const handlePbiClick = (key) => {
-    if (key === 'pbi_faturamento') navigate('/pbi/faturamento');
-    else if (key === 'pbi_pmo') navigate('/pbi/pmo');
-    else navigate(`/pbi/${key}`);
+    navigate(`/pbi/${key}`);
   };
 
   //Helper Categoria
@@ -207,7 +205,7 @@ const Sidebar = ({
   };
 
   // Filtros de Links
-  const pbiLinks = linksList.filter(l => l.link_key.startsWith('pbi_') && l.link_key !== 'pbi_faturamento' && l.link_key !== 'pbi_pmo');
+  const pbiLinks = linksList.filter(l => l.link_key.startsWith('pbi_'));
   const excelLinks = linksList.filter(l => l.link_key.startsWith('excel_'));
   const customLinks = linksList.filter(l => l.link_key.startsWith('custom_'));
 
@@ -258,19 +256,10 @@ const Sidebar = ({
         </Tooltip>
         <Collapse in={openPowerBI && isExpanded} timeout="auto" unmountOnExit>
           <List component="div" disablePadding>
-            {/* Hardcoded (Legacy/Priority) */}
-            <ListItemButton sx={{ pl: 4, ...getButtonStyle('/pbi/faturamento') }} onClick={() => handlePbiClick('pbi_faturamento')}>
-              <ListItemText primary="Faturamento" />
-              {/* Opção de editar hardcoded legacy se necessário, mas pode bugar se não tiver no banco */}
-            </ListItemButton>
-            <ListItemButton sx={{ pl: 4, ...getButtonStyle('/pbi/pmo') }} onClick={() => handlePbiClick('pbi_pmo')}>
-              <ListItemText primary="Dashboard PMO" />
-            </ListItemButton>
             {/* Dynamic */}
             {pbiLinks.map(link => (
               <ListItemButton key={link.link_key} sx={{ pl: 4, ...getButtonStyle(`/pbi/${link.link_key}`) }} onClick={() => handlePbiClick(link.link_key)}>
                 <ListItemText primary={link.title} />
-                {renderEditButton(link)}
               </ListItemButton>
             ))}
           </List>
