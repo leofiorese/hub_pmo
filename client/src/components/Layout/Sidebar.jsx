@@ -193,14 +193,11 @@ const Sidebar = ({
 
   const handleConfirmRedirect = () => { if (targetUrl) window.open(targetUrl, '_blank'); setRedirectDialog(false); };
 
-  const getButtonStyle = (path) => {
+  const getCommonSx = (path) => {
     const isActive = location.pathname === path;
     return {
       justifyContent: isExpanded ? 'initial' : 'center',
-      bgcolor: isActive ? 'action.selected' : 'transparent',
-      borderLeft: '4px solid',
-      borderLeftColor: isActive ? 'error.main' : 'transparent',
-      '&:hover': { bgcolor: 'action.hover' }
+      // Cores agora são gerenciadas pelo Theme (MuiListItemButton)
     };
   };
 
@@ -223,22 +220,45 @@ const Sidebar = ({
   const drawerContent = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Header */}
-      <Box sx={{ minHeight: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 1, overflow: 'hidden' }}>
-        {isExpanded ? (
-          <img src={mode === 'dark' ? logoDark : logoLight} alt="Logo" style={{ maxWidth: '140px', height: 'auto', transition: '0.3s' }} />
-        ) : (
-          <Typography variant="h6" fontWeight="bold" color="primary">S</Typography>
-        )}
+      <Box
+        onClick={() => navigate('/')}
+        sx={{
+          minHeight: 80,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          p: 1,
+          py: 2,
+          cursor: 'pointer',
+          '&:hover': { opacity: 0.9 }
+        }}
+      >
+        <img
+          src={mode === 'dark' ? logoDark : logoLight}
+          alt="Logo"
+          style={{
+            maxWidth: isExpanded ? '180px' : '40px',
+            maxHeight: isExpanded ? '100px' : '40px',
+            width: 'auto',
+            height: 'auto',
+            transition: 'all 0.3s ease-in-out',
+            objectFit: 'contain'
+          }}
+        />
       </Box>
-      <Divider />
+      <Divider sx={{ mx: 2, mb: 1, opacity: 0.5 }} />
 
-      <List sx={{ flexGrow: 1 }}>
+      <List sx={{ flexGrow: 1, px: 1 }}>
 
         {/* Visão Geral */}
         <Tooltip title={!isExpanded ? "Visão Geral" : ""} placement="right">
-          <ListItemButton onClick={() => navigate('/')} sx={getButtonStyle('/')}>
-            <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center' }}>
-              <Dashboard color={location.pathname === '/' ? 'primary' : 'inherit'} />
+          <ListItemButton
+            onClick={() => navigate('/')}
+            selected={location.pathname === '/'}
+            sx={getCommonSx('/')}
+          >
+            <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center', color: 'text.primary' }}>
+              <Dashboard />
             </ListItemIcon>
             {isExpanded && <ListItemText primary="Visão Geral" />}
           </ListItemButton>
@@ -247,7 +267,7 @@ const Sidebar = ({
         {/* --- Power BI --- */}
         <Tooltip title={!isExpanded ? "Power BI" : ""} placement="right">
           <ListItemButton onClick={() => handleGroupClick(openPowerBI, setOpenPowerBI)} sx={{ justifyContent: isExpanded ? 'initial' : 'center' }}>
-            <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center' }}>
+            <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center', color: 'text.primary' }}>
               <BarChart />
             </ListItemIcon>
             {isExpanded && <ListItemText primary="Power BI" />}
@@ -258,7 +278,12 @@ const Sidebar = ({
           <List component="div" disablePadding>
             {/* Dynamic */}
             {pbiLinks.map(link => (
-              <ListItemButton key={link.link_key} sx={{ pl: 4, ...getButtonStyle(`/pbi/${link.link_key}`) }} onClick={() => handlePbiClick(link.link_key)}>
+              <ListItemButton
+                key={link.link_key}
+                selected={location.pathname === `/pbi/${link.link_key}`}
+                sx={{ pl: 4, ...getCommonSx(`/pbi/${link.link_key}`) }}
+                onClick={() => handlePbiClick(link.link_key)}
+              >
                 <ListItemText primary={link.title} />
               </ListItemButton>
             ))}
@@ -268,7 +293,7 @@ const Sidebar = ({
         {/* --- Excel Online --- */}
         <Tooltip title={!isExpanded ? "Excel Online" : ""} placement="right">
           <ListItemButton onClick={() => handleGroupClick(openExcel, setOpenExcel)} sx={{ justifyContent: isExpanded ? 'initial' : 'center' }}>
-            <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center' }}>
+            <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center', color: 'text.primary' }}>
               <TableChart />
             </ListItemIcon>
             {isExpanded && <ListItemText primary="Excel Online" />}
@@ -290,7 +315,7 @@ const Sidebar = ({
         {/* --- Links Independentes (Custom) --- */}
         <Tooltip title={!isExpanded ? "Links Úteis" : ""} placement="right">
           <ListItemButton onClick={() => handleGroupClick(openCustom, setOpenCustom)} sx={{ justifyContent: isExpanded ? 'initial' : 'center' }}>
-            <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center' }}>
+            <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center', color: 'text.primary' }}>
               <LinkIcon />
             </ListItemIcon>
             {isExpanded && <ListItemText primary="Links Úteis" />}
@@ -317,27 +342,35 @@ const Sidebar = ({
             {/* Botão Adicionar Link */}
             <Tooltip title={!isExpanded ? "Adicionar Link" : ""} placement="right">
               <ListItemButton onClick={() => setAddLinkDialog(true)} sx={{ justifyContent: isExpanded ? 'initial' : 'center' }}>
-                <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center' }}>
-                  <AddIcon color="primary" />
+                <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center', color: 'text.primary' }}>
+                  <AddIcon />
                 </ListItemIcon>
-                {isExpanded && <ListItemText primary="Adicionar Link" primaryTypographyProps={{ color: 'primary', fontWeight: 'bold' }} />}
+                {isExpanded && <ListItemText primary="Adicionar Link" primaryTypographyProps={{ color: 'text.primary', fontWeight: 'bold' }} />}
               </ListItemButton>
             </Tooltip>
 
             {user?.role === 'admin' && (
               <>
                 <Tooltip title={!isExpanded ? "Gerenciar Usuários" : ""} placement="right">
-                  <ListItemButton onClick={() => navigate('/admin/users')} sx={getButtonStyle('/admin/users')}>
-                    <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center' }}>
-                      <AdminIcon color="error" />
+                  <ListItemButton
+                    onClick={() => navigate('/admin/users')}
+                    selected={location.pathname === '/admin/users'}
+                    sx={getCommonSx('/admin/users')}
+                  >
+                    <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center', color: 'inherit' }}>
+                      <AdminIcon />
                     </ListItemIcon>
                     {isExpanded && <ListItemText primary="Gerenciar Usuários" />}
                   </ListItemButton>
                 </Tooltip>
 
                 <Tooltip title={!isExpanded ? "Solicitações Pendentes" : ""} placement="right">
-                  <ListItemButton onClick={() => navigate('/admin/approvals')} sx={getButtonStyle('/admin/approvals')}>
-                    <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center' }}>
+                  <ListItemButton
+                    onClick={() => navigate('/admin/approvals')}
+                    selected={location.pathname === '/admin/approvals'}
+                    sx={getCommonSx('/admin/approvals')}
+                  >
+                    <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center', color: 'inherit' }}>
                       <Badge badgeContent={pendingCount} color="error">
                         <ApprovalIcon />
                       </Badge>
@@ -358,8 +391,12 @@ const Sidebar = ({
         )}
 
         <Tooltip title={!isExpanded ? "Minha Conta" : ""} placement="right">
-          <ListItemButton onClick={() => navigate('/profile')} sx={getButtonStyle('/profile')}>
-            <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center' }}>
+          <ListItemButton
+            onClick={() => navigate('/profile')}
+            selected={location.pathname === '/profile'}
+            sx={getCommonSx('/profile')}
+          >
+            <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center', color: 'inherit' }}>
               <PersonIcon />
             </ListItemIcon>
             {isExpanded && <ListItemText primary="Minha Conta" />}
@@ -370,7 +407,7 @@ const Sidebar = ({
 
         <Tooltip title={!isExpanded ? "Mudar Tema" : ""} placement="right">
           <ListItemButton onClick={toggleColorMode} sx={{ justifyContent: isExpanded ? 'initial' : 'center' }}>
-            <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center' }}>
+            <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center', color: 'text.primary' }}>
               {mode === 'dark' ? <Brightness7 /> : <Brightness4 />}
             </ListItemIcon>
             {isExpanded && <ListItemText primary="Modo Escuro" />}
