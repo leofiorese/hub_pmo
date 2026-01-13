@@ -342,10 +342,10 @@ const Sidebar = ({
             {/* Botão Adicionar Link */}
             <Tooltip title={!isExpanded ? "Adicionar Link" : ""} placement="right">
               <ListItemButton onClick={() => setAddLinkDialog(true)} sx={{ justifyContent: isExpanded ? 'initial' : 'center' }}>
-                <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center', color: 'text.primary' }}>
+                <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center', color: 'primary.main' }}>
                   <AddIcon />
                 </ListItemIcon>
-                {isExpanded && <ListItemText primary="Adicionar Link" primaryTypographyProps={{ color: 'text.primary', fontWeight: 'bold' }} />}
+                {isExpanded && <ListItemText primary="Adicionar Link" primaryTypographyProps={{ color: 'primary.main', fontWeight: 'bold' }} />}
               </ListItemButton>
             </Tooltip>
 
