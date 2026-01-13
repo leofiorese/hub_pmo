@@ -6,9 +6,12 @@ const authMiddleware = require('../middlewares/authMiddleware');
 // Middleware: precisa estar logado para ver os links
 router.use(authMiddleware);
 
-// Rota para listar TODOS (usado pela Sidebar para Excel/PSOffice)
+// Rota para listar TODOS
 // A rota final será: /api/links/
-router.get('/', linkController.listAll); 
+router.get('/', linkController.listAll);
+
+// Rota para criar NOVO link
+router.post('/', linkController.addLink);
 
 // Rota para pegar UM (usado pelas páginas de Power BI)
 // A rota final será: /api/links/:key

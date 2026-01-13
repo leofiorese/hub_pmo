@@ -19,10 +19,11 @@ import Dashboard from './pages/Dashboard';
 // Pages dos PowerBI's
 import Faturamento from './pages/PowerBI/Faturamento';
 import PMO from './pages/PowerBI/PMO';
+import DynamicPowerBI from './pages/PowerBI/DynamicPowerBI';
 
 // --- NOVA PÁGINA DE ADMIN ---
 // Certifique-se que o arquivo está em: client/src/pages/Admin/Users/index.jsx
-import UsersList from './pages/Admin/Users'; 
+import UsersList from './pages/Admin/Users';
 
 //Página do Profile 
 import Profile from './pages/Profile';
@@ -63,17 +64,18 @@ function App() {
             }>
               {/* Rota Index (Dashboard) */}
               <Route index element={<Dashboard />} />
-              
+
               {/* Rota de Admin (Nova) */}
               <Route path="admin/users" element={<UsersList />} />
               <Route path="/admin/approvals" element={<Approvals />} />
 
               {/*Rota de Profile*/}
               <Route path="/profile" element={<Profile />} />
-              
+
               {/* Rotas de Power BI */}
               <Route path="pbi/faturamento" element={<Faturamento />} />
               <Route path="pbi/pmo" element={<PMO />} />
+              <Route path="pbi/:key" element={<DynamicPowerBI />} />
             </Route>
 
           </Routes>
