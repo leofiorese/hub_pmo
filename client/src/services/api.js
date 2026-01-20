@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 const api = axios.create({
-  // Garanta que a porta é a mesma que aparece no terminal do backend (3000 ou 3001, etc)
-  baseURL: 'http://localhost:3000/api', 
+  // Usa variável de ambiente (definida no .env.production no build) ou fallback para local
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
 });
 
 // INTERCEPTOR: Antes de cada requisição, insere o token se ele existir
