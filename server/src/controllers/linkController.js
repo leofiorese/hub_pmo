@@ -17,7 +17,7 @@ class LinkController {
     async updateLink(req, res) {
         try {
             const { key } = req.params;
-            const { title, url, category } = req.body;
+            const { title, url, category, allowed_roles } = req.body;
 
             // Validação básica
             if (!url || !title || !category) return res.status(400).json({ error: 'Dados incompletos: title, url e category são obrigatórios' });
@@ -37,7 +37,9 @@ class LinkController {
                 newKey = `${prefix}${Date.now()}`;
             }
 
-            const updated = await linkRepository.updateLink(key, newKey, title, url);
+            const allowedRolesToSave = allowed_roles || ['admin', 'pmo', 'viewer'];
+
+            const updated = await linkRepository.updateLink(key, newKey, title, url, allowedRolesToSave);
             return res.json(updated);
         } catch (error) {
             console.error(error);
@@ -72,7 +74,7 @@ class LinkController {
     // POST /api/links (Admin/PMO)
     async addLink(req, res) {
         try {
-            const { title, url, category } = req.body;
+            const { title, url, category, allowed_roles } = req.body;
 
             if (!title || !url || !category) {
                 return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
@@ -87,7 +89,9 @@ class LinkController {
             // Gera chave única: prefix + timestamp
             const link_key = `${prefix}${Date.now()}`;
 
-            const newLink = await linkRepository.createLink(link_key, title, url);
+            const allowedRolesToSave = allowed_roles || ['admin', 'pmo', 'viewer'];
+
+            const newLink = await linkRepository.createLink(link_key, title, url, allowedRolesToSave);
             return res.status(201).json(newLink);
 
         } catch (error) {

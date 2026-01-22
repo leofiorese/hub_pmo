@@ -3,7 +3,7 @@ import {
   Box, Drawer, List, Typography, Divider, ListItemButton,
   ListItemIcon, ListItemText, Collapse, Dialog, DialogTitle,
   DialogContent, DialogContentText, DialogActions, Button, Switch, IconButton, Tooltip, TextField,
-  Badge, Chip, Select, MenuItem, InputLabel, FormControl
+  Badge, Chip, Select, MenuItem, InputLabel, FormControl, Checkbox, OutlinedInput
 } from '@mui/material';
 import {
   Dashboard, ExpandLess, ExpandMore, BarChart,
@@ -24,6 +24,12 @@ import api from '../../services/api';
 
 import logoLight from '../../assets/logo.png';
 import logoDark from '../../assets/logo_dark.png';
+
+const AVAILABLE_ROLES = [
+  { value: 'admin', label: 'Admin' },
+  { value: 'pmo', label: 'PMO' },
+  { value: 'viewer', label: 'Visualizador' }
+];
 
 const Sidebar = ({
   mobileOpen, handleDrawerToggle, drawerWidth, miniDrawerWidth,
@@ -50,11 +56,11 @@ const Sidebar = ({
 
   // EDIT STATE
   const [editDialog, setEditDialog] = useState(false);
-  const [editData, setEditData] = useState({ key: '', title: '', url: '', category: '' });
+  const [editData, setEditData] = useState({ key: '', title: '', url: '', category: '', allowed_roles: [] });
 
   // ADD STATE
   const [addLinkDialog, setAddLinkDialog] = useState(false);
-  const [newLinkData, setNewLinkData] = useState({ title: '', url: '', category: 'pbi' });
+  const [newLinkData, setNewLinkData] = useState({ title: '', url: '', category: 'pbi', allowed_roles: ['admin', 'pmo', 'viewer'] });
 
   const [saving, setSaving] = useState(false);
 
@@ -134,10 +140,13 @@ const Sidebar = ({
     if (typeof link === 'string') {
       const found = linksList.find(l => l.link_key === link);
       if (found) data = { ...found, category: getCategoryFromKey(found.link_key) };
-      else data = { key: link, url: linksMap[link] || '', title: 'Link', category: getCategoryFromKey(link) };
+      else data = { key: link, url: linksMap[link] || '', title: 'Link', category: getCategoryFromKey(link), allowed_roles: ['admin', 'pmo', 'viewer'] };
     } else {
       data = { ...link, key: link.link_key, category: getCategoryFromKey(link.link_key) };
     }
+    // Garantir allowed_roles
+    if (!data.allowed_roles) data.allowed_roles = ['admin', 'pmo', 'viewer'];
+
     setEditData(data);
     setEditDialog(true);
   };
@@ -149,7 +158,8 @@ const Sidebar = ({
       await api.put(`/links/${editData.key}`, {
         title: editData.title,
         url: editData.url,
-        category: editData.category
+        category: editData.category,
+        allowed_roles: editData.allowed_roles
       });
       fetchLinks();
       setEditDialog(false);
@@ -181,7 +191,7 @@ const Sidebar = ({
       await api.post('/links', newLinkData);
       fetchLinks();
       setAddLinkDialog(false);
-      setNewLinkData({ title: '', url: '', category: 'pbi' });
+      setNewLinkData({ title: '', url: '', category: 'pbi', allowed_roles: ['admin', 'pmo', 'viewer'] });
       alert("Link criado com sucesso!");
     } catch (error) {
       console.error(error);
@@ -202,9 +212,22 @@ const Sidebar = ({
   };
 
   // Filtros de Links
-  const pbiLinks = linksList.filter(l => l.link_key.startsWith('pbi_'));
-  const excelLinks = linksList.filter(l => l.link_key.startsWith('excel_'));
-  const customLinks = linksList.filter(l => l.link_key.startsWith('custom_'));
+  // Filtros de Links
+  const checkAccess = (link) => {
+    // Admin vê tudo para gerenciar (ou se quiser ver como user, teria que ter toggle, mas assumimos vê tudo)
+    // Se quiser que a sidebar respeite estritamente, remova a checagem de admin.
+    // Mas Admin precisa editar, então se sumir da sidebar, ele não edita (já que o botão edit tá lá).
+    // Então Admin SEMPRE vê.
+    if (user?.role === 'admin') return true;
+
+    if (!link.allowed_roles || !Array.isArray(link.allowed_roles) || link.allowed_roles.length === 0) return true; // Legacy fallback
+
+    return link.allowed_roles.includes(user?.role);
+  };
+
+  const pbiLinks = linksList.filter(l => l.link_key.startsWith('pbi_') && checkAccess(l));
+  const excelLinks = linksList.filter(l => l.link_key.startsWith('excel_') && checkAccess(l));
+  const customLinks = linksList.filter(l => l.link_key.startsWith('custom_') && checkAccess(l));
 
   const renderEditButton = (link) => {
     if (['admin', 'pmo'].includes(user?.role)) {
@@ -469,6 +492,23 @@ const Sidebar = ({
                 <MenuItem value="custom">Link Independente</MenuItem>
               </Select>
             </FormControl>
+            <FormControl fullWidth>
+              <InputLabel>Cargos Permitidos</InputLabel>
+              <Select
+                multiple
+                value={editData.allowed_roles || []}
+                onChange={(e) => setEditData({ ...editData, allowed_roles: typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value })}
+                input={<OutlinedInput label="Cargos Permitidos" />}
+                renderValue={(selected) => selected.map(val => AVAILABLE_ROLES.find(r => r.value === val)?.label || val).join(', ')}
+              >
+                {AVAILABLE_ROLES.map((role) => (
+                  <MenuItem key={role.value} value={role.value}>
+                    <Checkbox checked={(editData.allowed_roles || []).indexOf(role.value) > -1} />
+                    <ListItemText primary={role.label} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Box>
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'space-between', px: 3, pb: 2 }}>
@@ -499,6 +539,23 @@ const Sidebar = ({
                 <MenuItem value="pbi">Power BI</MenuItem>
                 <MenuItem value="excel">Excel Online</MenuItem>
                 <MenuItem value="custom">Link Independente</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl fullWidth>
+              <InputLabel>Cargos Permitidos</InputLabel>
+              <Select
+                multiple
+                value={newLinkData.allowed_roles || []}
+                onChange={(e) => setNewLinkData({ ...newLinkData, allowed_roles: typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value })}
+                input={<OutlinedInput label="Cargos Permitidos" />}
+                renderValue={(selected) => selected.map(val => AVAILABLE_ROLES.find(r => r.value === val)?.label || val).join(', ')}
+              >
+                {AVAILABLE_ROLES.map((role) => (
+                  <MenuItem key={role.value} value={role.value}>
+                    <Checkbox checked={(newLinkData.allowed_roles || []).indexOf(role.value) > -1} />
+                    <ListItemText primary={role.label} />
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
           </Box>
