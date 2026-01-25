@@ -34,6 +34,7 @@ O sistema migrou de uma arquitetura Desktop Monolítica para uma arquitetura **W
 | **Database** | **MySQL 8.x** | Banco Relacional (InnoDB) com driver `mysql2`. |
 | **Auth** | **JWT** + **Bcrypt** | Autenticação Stateless e Hash de senhas. |
 | **RPA Engine** | **Playwright** | Automação de navegador headless no servidor. |
+| **AI Core** | **Ollama** (qwen2.5:14b) | LLM Local para análise inteligente de dados. |
 
 ### 2.2 Padrões de Projeto (Design Patterns)
 * **Frontend:** Hooks Pattern, Context API (Estado Global).
@@ -243,6 +244,14 @@ client/src/
 1.1.10.1 Deve existir funcionalidade de logout acessível ao usuário.
 1.1.10.2 O token deve ser removido do contexto da aplicação.
 
+#### 1.1.11 Módulo de Analytics com IA
+
+1.1.11.1 **Wizard de Análise**: Interface passo-a-passo (Welcome -> QueryBuilder -> DataPreview -> PromptBuilder -> Results).
+1.1.11.2 **Preview Interativo**: Visualização tabular dos dados com ajuste dinâmico de altura e overlay de carregamento (UX Smooth).
+1.1.11.3 **Filtros Dinâmicos**: Possibilidade de criar filtros complexos para refinar o dataset antes da análise.
+1.1.11.4 **Resultados em Markdown**: Renderização rica da resposta da IA.
+1.1.11.5 **Persistência de Estado**: Uso de `AnalyticsContext` para manter seleções e filtros ao navegar entre etapas.
+
 ---
 
 ### 1.2 REQUISITOS NÃO FUNCIONAIS
@@ -327,6 +336,13 @@ client/src/
 
 2.1.10.1 O backend deve ser stateless.
 2.1.10.2 Deve permitir execução em múltiplas instâncias.
+
+#### 2.1.11 Motor de Análise (AI Engine)
+
+2.1.11.1 **Semantic Layer**: Camada de configuração que mapeia colunas do banco para nomes amigáveis e define whitelists de segurança.
+2.1.11.2 **SQL Dinâmico Seguro**: Construção de queries baseada em filtros validados, prevenindo injeção de SQL.
+2.1.11.3 **Integração Ollama**: Comunicação via HTTP com instância local do Ollama para processamento de prompts.
+2.1.11.4 **Sanitização de Contexto**: Limitação automática de linhas (Top 50) e formatação otimizada para reduzir uso de tokens.
 
 ---
 
