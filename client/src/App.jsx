@@ -18,6 +18,11 @@ import Dashboard from './pages/Dashboard';
 
 // Pages dos PowerBI's
 import DynamicPowerBI from './pages/PowerBI/DynamicPowerBI';
+import Welcome from './pages/Analytics/Welcome';
+import QueryBuilder from './pages/Analytics/QueryBuilder';
+import DataPreview from './pages/Analytics/DataPreview';
+import PromptBuilder from './pages/Analytics/PromptBuilder';
+import AnalysisResults from './pages/Analytics/AnalysisResults';
 
 // --- NOVA PÁGINA DE ADMIN ---
 // Certifique-se que o arquivo está em: client/src/pages/Admin/Users/index.jsx
@@ -62,6 +67,13 @@ function App() {
             }>
               {/* Rota Index (Dashboard) */}
               <Route index element={<Dashboard />} />
+
+              {/* Rota de Analytics */}
+              <Route path="/analytics" element={<Welcome />} />
+              <Route path="/analytics/builder" element={<QueryBuilder />} />
+              <Route path="/analytics/preview" element={<DataPreview />} />
+              <Route path="/analytics/prompt" element={<PromptBuilder />} />
+              <Route path="/analytics/results" element={<AnalysisResults />} />
 
               {/* Rota de Admin (Nova) */}
               <Route path="admin/users" element={<UsersList />} />

@@ -15,7 +15,8 @@ import {
   Person as PersonIcon,
   Link as LinkIcon,
   Add as AddIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  AutoAwesome as AutoAwesomeIcon
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../../hooks/useTheme';
@@ -286,6 +287,22 @@ const Sidebar = ({
             {isExpanded && <ListItemText primary="Visão Geral" />}
           </ListItemButton>
         </Tooltip>
+
+        {/* --- Análise Inteligente --- */}
+        <Tooltip title={!isExpanded ? "Análise IA" : ""} placement="right">
+          <ListItemButton
+            onClick={() => navigate('/analytics')}
+            selected={location.pathname.startsWith('/analytics')}
+            sx={getCommonSx('/analytics')}
+          >
+            <ListItemIcon sx={{ minWidth: 0, mr: isExpanded ? 3 : 'auto', justifyContent: 'center', color: 'primary.main' }}>
+              <AutoAwesomeIcon />
+            </ListItemIcon>
+            {isExpanded && <ListItemText primary="Análise IA" primaryTypographyProps={{ color: 'primary.main', fontWeight: 'bold' }} />}
+          </ListItemButton>
+        </Tooltip>
+
+        <Divider sx={{ my: 1, opacity: 0.5 }} />
 
         {/* --- Power BI --- */}
         <Tooltip title={!isExpanded ? "Power BI" : ""} placement="right">
