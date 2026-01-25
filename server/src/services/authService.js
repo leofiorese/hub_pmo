@@ -1,6 +1,6 @@
 const userRepository = require('../repositories/userRepository');
 const bcrypt = require('bcryptjs');
-const crypto = require('crypto'); 
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 
 class AuthService {
@@ -29,12 +29,12 @@ class AuthService {
 
         // Gera o token JWT
         const token = jwt.sign(
-            { 
-            id: user.id,      
-            role: user.role,  
-            name: user.name 
-            }, 
-            process.env.JWT_SECRET, 
+            {
+                id: user.id,
+                role: user.role,
+                name: user.name
+            },
+            process.env.JWT_SECRET,
             { expiresIn: '1d' }
         );
 
@@ -53,7 +53,7 @@ class AuthService {
         if (!data.email.toLowerCase().endsWith('@sandech.com.br')) {
             throw new Error('Acesso negado: Domínio de e-mail não autorizado.');
         }
-        
+
         if (userExists) {
             throw new Error('Este e-mail já está cadastrado.');
         }
@@ -73,7 +73,7 @@ class AuthService {
     // --- LÓGICA DE ESQUECEU A SENHA ---
     async sendRecoveryEmail(email) {
         const user = await userRepository.findByEmail(email);
-        
+
         if (!user) {
             return { message: 'Se o e-mail existir, o link foi enviado.' };
         }
@@ -85,7 +85,7 @@ class AuthService {
         await userRepository.saveResetToken(email, token, now);
 
         const resetLink = `http://localhost:5173/reset-password?token=${token}`;
-        
+
         console.log('==================================================');
         console.log('📧 [EMAIL MOCK] Para:', email);
         console.log('🔗 Link de Recuperação:', resetLink);
@@ -103,8 +103,17 @@ class AuthService {
 
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         await userRepository.updatePassword(user.id, hashedPassword);
-        
+
         return { message: 'Senha alterada com sucesso.' };
+    }
+
+    // --- NOVO: BUSCAR USUÁRIO POR ID (Chamado pelo getMe) ---
+    async getUserById(id) {
+        const user = await userRepository.findById(id);
+        if (!user) return null;
+
+        const { password_hash, ...userWithoutPassword } = user;
+        return userWithoutPassword;
     }
 }
 

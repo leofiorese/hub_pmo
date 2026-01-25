@@ -8,13 +8,29 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Ao carregar a página, verifica se já tem token salvo
-    const loadStorageData = () => {
+    // Ao carregar a página, verifica se já tem token salvo e valida com o backend
+    const loadStorageData = async () => {
       const storedUser = localStorage.getItem('user');
       const storedToken = localStorage.getItem('token');
 
-      if (storedUser && storedToken) {
-        setUser(JSON.parse(storedUser));
+      if (storedToken) {
+        // 1. Carregamento Otimista (Mostra a UI imediatamente)
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        }
+
+        // 2. Validação Silenciosa (Verifica se o token ainda é válido no servidor)
+        try {
+          const response = await api.get('/auth/me');
+          // Atualiza com dados frescos (caso role ou status tenha mudado)
+          setUser(response.data.user);
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+        } catch (error) {
+          console.error("Sessão expirada ou inválida:", error);
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setUser(null);
+        }
       }
       setLoading(false);
     };

@@ -17,7 +17,7 @@ class AuthController {
             if (error.message === 'Usuário não encontrado.' || error.message === 'Usuário ou senha inválidos.') {
                 return res.status(401).json({ error: 'Credenciais inválidas.' });
             }
-            
+
             // 2. NOVO: Erro de Aprovação Pendente (403 Forbidden)
             // Deixa passar a mensagem exata que definimos no Service
             if (error.message === 'Cadastro pendente de aprovação pelo Administrador.') {
@@ -56,6 +56,19 @@ class AuthController {
             return res.json(result);
         } catch (error) {
             return res.status(400).json({ error: error.message });
+        }
+    }
+
+    async getMe(req, res) {
+        try {
+            const user = await authService.getUserById(req.userId);
+            if (!user) {
+                return res.status(404).json({ error: 'Usuário não encontrado.' });
+            }
+            return res.json({ user });
+        } catch (error) {
+            console.error('Erro no getMe:', error);
+            return res.status(500).json({ error: 'Erro ao buscar dados do usuário.' });
         }
     }
 }
