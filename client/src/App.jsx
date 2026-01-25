@@ -5,6 +5,7 @@ import { CustomThemeProvider } from './contexts/ThemeContext';
 
 // --- CONTEXTOS E HOOKS ---
 import { AuthProvider } from './contexts/AuthContext';
+import { AnalyticsProvider } from './contexts/AnalyticsContext'; // Importar
 import { useAuth } from './hooks/useAuth';
 
 // --- PÁGINAS PÚBLICAS ---
@@ -50,45 +51,49 @@ function App() {
   return (
     <CustomThemeProvider>
       <CssBaseline />
+      <CssBaseline />
       <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            {/* --- ROTAS PÚBLICAS (Fora do Layout Principal) --- */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+        <AnalyticsProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* --- ROTAS PÚBLICAS (Fora do Layout Principal) --- */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
-            {/* --- ROTAS PRIVADAS (Dentro do Layout Principal) --- */}
-            {/* Unificamos tudo neste bloco único */}
-            <Route path="/" element={
-              <PrivateRoute>
-                <MainLayout />
-              </PrivateRoute>
-            }>
-              {/* Rota Index (Dashboard) */}
-              <Route index element={<Dashboard />} />
+              {/* --- ROTAS PRIVADAS (Dentro do Layout Principal) --- */}
+              {/* Unificamos tudo neste bloco único */}
+              <Route path="/" element={
+                <PrivateRoute>
+                  <MainLayout />
+                </PrivateRoute>
+              }>
+                {/* Rota Index (Dashboard) */}
+                <Route index element={<Dashboard />} />
 
-              {/* Rota de Analytics */}
-              <Route path="/analytics" element={<Welcome />} />
-              <Route path="/analytics/builder" element={<QueryBuilder />} />
-              <Route path="/analytics/preview" element={<DataPreview />} />
-              <Route path="/analytics/prompt" element={<PromptBuilder />} />
-              <Route path="/analytics/results" element={<AnalysisResults />} />
+                {/* Rota de Analytics */}
+                <Route path="/analytics" element={<Welcome />} />
+                <Route path="/analytics/builder" element={<QueryBuilder />} />
+                <Route path="/analytics/preview" element={<DataPreview />} />
+                <Route path="/analytics/prompt" element={<PromptBuilder />} />
+                <Route path="/analytics/results" element={<AnalysisResults />} />
 
-              {/* Rota de Admin (Nova) */}
-              <Route path="admin/users" element={<UsersList />} />
-              <Route path="/admin/approvals" element={<Approvals />} />
+                {/* Rota de Admin (Nova) */}
+                <Route path="admin/users" element={<UsersList />} />
+                <Route path="/admin/approvals" element={<Approvals />} />
 
-              {/*Rota de Profile*/}
-              <Route path="/profile" element={<Profile />} />
+                {/*Rota de Profile*/}
+                <Route path="/profile" element={<Profile />} />
 
-              {/* Rotas de Power BI */}
-              {/* Todas as rotas PBI agora usam o componente dinâmico */}
-              <Route path="pbi/:key" element={<DynamicPowerBI />} />
-            </Route>
+                {/* Rotas de Power BI */}
+                {/* Todas as rotas PBI agora usam o componente dinâmico */}
+                <Route path="pbi/:key" element={<DynamicPowerBI />} />
 
-          </Routes>
-        </BrowserRouter>
+              </Route>
+
+            </Routes>
+          </BrowserRouter>
+        </AnalyticsProvider>
       </AuthProvider>
     </CustomThemeProvider>
   );

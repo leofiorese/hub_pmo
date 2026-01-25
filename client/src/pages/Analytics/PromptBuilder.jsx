@@ -9,6 +9,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
+import { useAnalytics } from '../../contexts/AnalyticsContext';
 
 const PromptBuilder = () => {
     const navigate = useNavigate();
@@ -19,8 +20,9 @@ const PromptBuilder = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Data passed from Preview
-    const preparedData = location.state?.preparedData;
+    // Data passed from Preview (Context)
+    const { dataPreview } = useAnalytics();
+    const preparedData = dataPreview;
 
     if (!preparedData) {
         return (

@@ -6,9 +6,15 @@ import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import TableViewIcon from '@mui/icons-material/TableView';
 import ChatIcon from '@mui/icons-material/Chat';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
+import { useAnalytics } from '../../contexts/AnalyticsContext';
 
 const Welcome = () => {
     const navigate = useNavigate();
+    const { clearAnalytics } = useAnalytics();
+
+    React.useEffect(() => {
+        clearAnalytics();
+    }, []);
 
     const steps = [
         {

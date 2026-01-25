@@ -10,12 +10,20 @@ import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
+import { useAnalytics } from '../../contexts/AnalyticsContext';
 
 const QueryBuilder = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [schema, setSchema] = useState({});
-    const [selectedColumns, setSelectedColumns] = useState({}); // { TABLE_KEY: ['col1', 'col2'] }
+
+    // Global State from Context
+    const { selectedTables, setSelectedTables } = useAnalytics();
+
+    // Local Alias for compatibility (optional, but keeps code cleaner)
+    const selectedColumns = selectedTables;
+    const setSelectedColumns = setSelectedTables;
+
     const [error, setError] = useState(null);
 
     // Fetch Schema on Mount
@@ -85,10 +93,8 @@ const QueryBuilder = () => {
     };
 
     const handleProceed = () => {
-        // Salvar estado (Contexto ou URL) e navegar
-        // Por enquanto, apenas logar
-        console.log("Selected:", selectedColumns);
-        navigate('/analytics/preview', { state: { selectedTables: selectedColumns } });
+        // State is already saved in Context
+        navigate('/analytics/preview');
     };
 
     if (loading) {

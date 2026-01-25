@@ -18,7 +18,7 @@ const AnalyticsController = {
     // 2. Query Data
     executeQuery: async (req, res) => {
         try {
-            const { selectedTables } = req.body;
+            const { selectedTables, filters } = req.body; // filters: { TABLE_KEY: [ { column, operator, value } ] }
 
             if (!selectedTables || Object.keys(selectedTables).length === 0) {
                 return res.status(400).json({ error: 'Nenhuma tabela selecionada.' });
@@ -31,30 +31,76 @@ const AnalyticsController = {
 
                 const tableName = SEMANTIC_LAYER[tableKey].tableName;
                 const savedColumns = SEMANTIC_LAYER[tableKey].columns;
-                const validColumns = columns.filter(col => savedColumns[col]);
 
+                // Validate Columns
+                const validColumns = columns.filter(col => savedColumns[col]);
                 if (validColumns.length === 0) continue;
 
                 const selectClause = validColumns.join(', ');
 
+                // Validate and Build Filters
+                let whereClause = "";
+                let params = [];
+
+                if (filters && filters[tableKey] && Array.isArray(filters[tableKey])) {
+                    const conditions = [];
+                    filters[tableKey].forEach(filter => {
+                        const { column, operator, value } = filter;
+
+                        // Security Check: Column must be whitelisted
+                        if (!savedColumns[column]) return;
+
+                        // Security Check: Operator must be whitelisted
+                        const allowedOps = ['=', '>', '<', '>=', '<=', '!=', 'LIKE'];
+                        if (!allowedOps.includes(operator)) return;
+
+                        conditions.push(`${column} ${operator} ?`);
+                        params.push(value);
+                    });
+
+                    if (conditions.length > 0) {
+                        whereClause = `WHERE ${conditions.join(' AND ')}`;
+                    }
+                }
+
                 // Executar Query (Mock vs Real)
                 if (tableKey === 'FINANCIAL') {
-                    // Mock Data
-                    resultData[tableKey] = [
+                    // Mock Data Implementation with filtering
+                    var mockData = [
                         { date: '2023-01-01', value: 1500.00, category: 'Software', description: 'Licença' },
                         { date: '2023-01-05', value: 200.00, category: 'Infra', description: 'Cabo' },
                         { date: '2023-02-10', value: 3500.00, category: 'Serviços', description: 'Consultoria' },
+                        { date: '2023-03-15', value: 12000.00, category: 'Software', description: 'Dev Outsourcing' },
                     ];
-                } else {
-                    // Real DB (Se conexão estiver pronta)
-                    // const query = `SELECT ${selectClause} FROM ${tableName} LIMIT 50`;
-                    // ... implementação real
 
-                    // Mock para Demo enquanto não conecta no DB real
-                    resultData[tableKey] = [
-                        { name: 'Projeto Alpha', status: 'Em Andamento', budget: 50000 },
-                        { name: 'Projeto Beta', status: 'Concluído', budget: 120000 },
-                    ];
+                    // Simple JS Filter for Mock Data
+                    if (filters && filters[tableKey]) {
+                        mockData = mockData.filter(row => {
+                            return filters[tableKey].every(f => {
+                                const val = row[f.column];
+                                const target = f.value;
+                                switch (f.operator) {
+                                    case '=': return val == target;
+                                    case '!=': return val != target;
+                                    case '>': return val > target;
+                                    case '<': return val < target;
+                                    case '>=': return val >= target;
+                                    case '<=': return val <= target;
+                                    case 'LIKE': return String(val).toLowerCase().includes(String(target).toLowerCase());
+                                    default: return true;
+                                }
+                            });
+                        });
+                    }
+
+                    resultData[tableKey] = mockData;
+                } else {
+                    // Real DB Query Construction
+                    const query = `SELECT ${selectClause} FROM ${tableName} ${whereClause} LIMIT 50`;
+                    console.log(`[Analytics] Executing: ${query} params:`, params);
+
+                    const [rows] = await db.execute(query, params);
+                    resultData[tableKey] = rows;
                 }
             }
 
