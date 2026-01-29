@@ -8,6 +8,7 @@ const adminRoutes = require('./routes/adminRoutes');
 const linkRoutes = require('./routes/linkRoutes'); // <--- VERIFIQUE ESTA LINHA
 const profileRoutes = require('./routes/profileRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes'); // [NEW] Analytics
+const ollamaRoutes = require('./routes/ollamaRoutes'); // [NEW] Ollama Routes
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.use('/api/admin', adminRoutes); // Cria as rotas /api/admin/...
 app.use('/api/links', linkRoutes);  // Cria as rotas /api/links/... <--- VERIFIQUE ESTA LINHA
 app.use('/api/profile', profileRoutes);
 app.use('/api/analytics', analyticsRoutes); // [NEW] Analytics Routes
+app.use('/api/ollama', ollamaRoutes); // [NEW] Ollama Routes
 
 app.get('/', (req, res) => {
     res.json({ message: '🚀 PMO Hub Backend está online!' });

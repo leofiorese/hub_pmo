@@ -24,6 +24,7 @@ import QueryBuilder from './pages/Analytics/QueryBuilder';
 import DataPreview from './pages/Analytics/DataPreview';
 import PromptBuilder from './pages/Analytics/PromptBuilder';
 import AnalysisResults from './pages/Analytics/AnalysisResults';
+import AiAnalytics from './pages/AiAnalytics'; // [NEW]
 
 // --- NOVA PÁGINA DE ADMIN ---
 // Certifique-se que o arquivo está em: client/src/pages/Admin/Users/index.jsx
@@ -77,6 +78,7 @@ function App() {
                 <Route path="/analytics/preview" element={<DataPreview />} />
                 <Route path="/analytics/prompt" element={<PromptBuilder />} />
                 <Route path="/analytics/results" element={<AnalysisResults />} />
+                <Route path="/ai-analytics" element={<AiAnalytics />} /> {/* [NEW] */}
 
                 {/* Rota de Admin (Nova) */}
                 <Route path="admin/users" element={<UsersList />} />
