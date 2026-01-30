@@ -1,10 +1,8 @@
-const axios = require('axios');
-
-const getOllamaUrl = () => process.env.OLLAMA_URL || 'http://localhost:11434';
+const ollamaClient = require('../config/ollama');
 
 exports.listModels = async (req, res) => {
     try {
-        const response = await axios.get(`${getOllamaUrl()}/api/tags`);
+        const response = await ollamaClient.get('/api/tags');
         res.json(response.data);
     } catch (error) {
         console.error('Error fetching models from Ollama:', error.message);
@@ -26,7 +24,7 @@ exports.chat = async (req, res) => {
         // Let's stick to non-streaming for the first implementation to ensure reliability,
         // unless the user specifically asked for streaming (the plan mentioned "streaming or displayed correctly").
 
-        const response = await axios.post(`${getOllamaUrl()}/api/generate`, {
+        const response = await ollamaClient.post('/api/generate', {
             model,
             prompt,
             stream: false // Force non-streaming for now to simplify the proxy

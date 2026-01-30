@@ -1,8 +1,6 @@
 const { getAvailableSchemas, SEMANTIC_LAYER } = require('../config/semanticLayer');
 const db = require('../config/db');
-const axios = require('axios'); // Agora disponível
-
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
+const ollamaClient = require('../config/ollama');
 
 const AnalyticsController = {
     // 1. Schema
@@ -158,7 +156,7 @@ ${dataContext}
 
             // 3. Chamar Ollama
             // Nota: Endpoint /api/chat ou /api/generate dependendo da versão
-            const ollamaResponse = await axios.post(`${OLLAMA_URL}/api/chat`, {
+            const ollamaResponse = await ollamaClient.post('/api/chat', {
                 model: model || 'qwen2.5:14b',
                 messages: [
                     { role: 'system', content: systemPrompt },
