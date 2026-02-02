@@ -30,7 +30,7 @@ import AiAnalytics from './pages/AiAnalytics'; // [NEW]
 // Certifique-se que o arquivo está em: client/src/pages/Admin/Users/index.jsx
 import UsersList from './pages/Admin/Users';
 
-//Página do Profile 
+//Página do Profile
 import Profile from './pages/Profile';
 
 //Página de Aprovações de Usuário
@@ -52,10 +52,9 @@ function App() {
   return (
     <CustomThemeProvider>
       <CssBaseline />
-      <CssBaseline />
       <AuthProvider>
         <AnalyticsProvider>
-          <BrowserRouter>
+          <BrowserRouter basename={import.meta.env.VITE_BASE_PATH || ""}>
             <Routes>
               {/* --- ROTAS PÚBLICAS (Fora do Layout Principal) --- */}
               <Route path="/login" element={<Login />} />
