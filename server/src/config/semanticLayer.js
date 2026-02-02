@@ -1,5 +1,5 @@
 // Mapeamento "Amigável" do Banco de Dados para a IA e para o Usuário
-export const SEMANTIC_LAYER = {
+const SEMANTIC_LAYER = {
     PROJECTS: {
         friendlyName: "Projetos",
         tableName: "projects",
@@ -35,7 +35,7 @@ export const SEMANTIC_LAYER = {
     }
 };
 
-export const getAvailableSchemas = () => {
+const getAvailableSchemas = () => {
     // Retorna apenas os metadados para o frontend montar a árvore de seleção
     const schemas = {};
     Object.keys(SEMANTIC_LAYER).forEach(key => {
@@ -45,4 +45,9 @@ export const getAvailableSchemas = () => {
         };
     });
     return schemas;
+};
+
+module.exports = {
+    SEMANTIC_LAYER,
+    getAvailableSchemas
 };
