@@ -28,6 +28,11 @@ app.get('/', (req, res) => {
     res.json({ message: '🚀 PMO Hub Backend está online!' });
 });
 
+// Health check endpoint para Docker
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🔥 Servidor rodando na porta ${PORT}`);

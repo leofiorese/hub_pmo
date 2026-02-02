@@ -1,39 +1,80 @@
+# =============================================================================
+# HUB PMO - Docker Compose (Production)
+# =============================================================================
+# Uso: docker-compose up -d --build
+#
+# Este arquivo é para PRODUÇÃO
+# - Backend Node.js/Express conecta ao MySQL externo
+# - Frontend React/Vite servido por Nginx no subpath /pmohub
+# =============================================================================
+
 version: '3.8'
 
 services:
+  # ---------------------------------------------------------------------------
+  # Backend API (Node.js + Express)
+  # ---------------------------------------------------------------------------
   backend:
     build:
       context: ./server
       dockerfile: Dockerfile
+    image: hub-pmo-backend:latest
     container_name: hub-pmo-backend
     ports:
       - "7000:7000"
+    environment:
+      - PORT=7000
     env_file:
       - ./server/.env
-    environment:
-      PORT: 7000
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    restart: always
     networks:
       - hub-pmo-network
-    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:7000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
+  # ---------------------------------------------------------------------------
+  # Frontend (React/Vite - Build Estático servido por Nginx)
+  # ---------------------------------------------------------------------------
   frontend:
     build:
       context: ./client
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: /pmohub/api
-        VITE_BASE_PATH: /pmohub
+        - VITE_API_URL=/pmohub/api
+        - VITE_BASE_PATH=/pmohub
+    image: hub-pmo-frontend:latest
     container_name: hub-pmo-frontend
     ports:
       - "7001:7001"
+    environment:
+      - NODE_ENV=production
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - backend
+    restart: always
     networks:
       - hub-pmo-network
-    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
+# =============================================================================
+# Networks
+# =============================================================================
 networks:
   hub-pmo-network:
     driver: bridge
