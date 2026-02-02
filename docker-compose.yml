@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: hub-pmo-backend
+    ports:
+      - "7000:7000"
+    env_file:
+      - ./server/.env
+    environment:
+      PORT: 7000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - hub-pmo-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /pmohub/api
+        VITE_BASE_PATH: /pmohub
+    container_name: hub-pmo-frontend
+    ports:
+      - "7001:7001"
+    depends_on:
+      - backend
+    networks:
+      - hub-pmo-network
+    restart: unless-stopped
+
+networks:
+  hub-pmo-network:
+    driver: bridge
