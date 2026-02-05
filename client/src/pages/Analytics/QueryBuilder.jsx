@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     Box, Typography, Paper, Container, Grid,
     Checkbox, FormGroup, FormControlLabel, Accordion,
@@ -8,9 +8,57 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import StorageIcon from '@mui/icons-material/Storage';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { useAnalytics } from '../../contexts/AnalyticsContext';
+
+const TableCard = React.memo(({ tableKey, tableData, selectedColumns, onSelectTable, onToggleColumn }) => (
+    <Grid item xs={12} md={6}>
+        <Accordion elevation={2}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', pr: 2 }}>
+                    <Typography variant="h6">{tableData.friendlyName}</Typography>
+                    <Chip
+                        label={`${(selectedColumns || []).length} selecionados`}
+                        size="small"
+                        color={(selectedColumns || []).length > 0 ? "primary" : "default"}
+                    />
+                </Box>
+            </AccordionSummary>
+            <Divider />
+            <AccordionDetails>
+                <Box sx={{ mb: 2 }}>
+                    <Button size="small" onClick={() => onSelectTable(tableKey)}>
+                        {(selectedColumns || []).length === Object.keys(tableData.columns).length ? "Desmarcar Todos" : "Selecionar Todos"}
+                    </Button>
+                </Box>
+                <FormGroup>
+                    {Object.entries(tableData.columns).map(([colKey, colData]) => (
+                        <FormControlLabel
+                            key={colKey}
+                            control={
+                                <Checkbox
+                                    checked={(selectedColumns || []).includes(colKey)}
+                                    onChange={() => onToggleColumn(tableKey, colKey)}
+                                />
+                            }
+                            label={
+                                <Box>
+                                    <Typography variant="body1">{colData.label}</Typography>
+                                    {colData.description && (
+                                        <Typography variant="caption" color="text.secondary">{colData.description}</Typography>
+                                    )}
+                                </Box>
+                            }
+                            sx={{ mb: 1, alignItems: 'center' }}
+                        />
+                    ))}
+                </FormGroup>
+            </AccordionDetails>
+        </Accordion>
+    </Grid>
+));
 
 const QueryBuilder = () => {
     const navigate = useNavigate();
@@ -20,7 +68,7 @@ const QueryBuilder = () => {
     // Global State from Context
     const { selectedTables, setSelectedTables } = useAnalytics();
 
-    // Local Alias for compatibility (optional, but keeps code cleaner)
+    // Local Alias
     const selectedColumns = selectedTables;
     const setSelectedColumns = setSelectedTables;
 
@@ -30,26 +78,20 @@ const QueryBuilder = () => {
     useEffect(() => {
         const fetchSchema = async () => {
             try {
-                // TODO: Remover fallback quando backend estiver 100% integrado
-                // const response = await api.get('/analytics/schema');
-                // setSchema(response.data);
-
-                // Fallback temporário caso a API não responda imediatamente no dev
+                const response = await api.get('/analytics/schema');
+                setSchema(response.data);
+            } catch (err) {
+                console.error(err);
                 try {
-                    const response = await api.get('/analytics/schema');
-                    setSchema(response.data);
-                } catch (e) {
-                    console.warn("API Schema falhou, usando mock local para dev UI", e);
+                    console.warn("API Schema falhou, usando mock local para dev UI");
                     setSchema({
                         PROJECTS: { friendlyName: "Projetos", columns: { name: { label: "Nome" }, budget: { label: "Orçamento" } } },
                         USERS: { friendlyName: "Usuários", columns: { name: { label: "Nome" }, email: { label: "Email" } } }
                     });
                     setError("Modo Offline: Não foi possível conectar ao Backend de Analytics.");
+                } catch (e) {
+                    setError("Erro ao carregar estrutura de dados.");
                 }
-
-            } catch (err) {
-                console.error(err);
-                setError("Erro ao carregar estrutura de dados.");
             } finally {
                 setLoading(false);
             }
@@ -61,10 +103,8 @@ const QueryBuilder = () => {
         setSelectedColumns(prev => {
             const currentTableCols = prev[tableKey] || [];
             if (currentTableCols.includes(colKey)) {
-                // Remove
                 return { ...prev, [tableKey]: currentTableCols.filter(c => c !== colKey) };
             } else {
-                // Add
                 return { ...prev, [tableKey]: [...currentTableCols, colKey] };
             }
         });
@@ -78,10 +118,8 @@ const QueryBuilder = () => {
         const currentSelected = selectedColumns[tableKey] || [];
 
         if (currentSelected.length === allColKeys.length) {
-            // Deselect All
             setSelectedColumns(prev => ({ ...prev, [tableKey]: [] }));
         } else {
-            // Select All
             setSelectedColumns(prev => ({ ...prev, [tableKey]: allColKeys }));
         }
     };
@@ -93,9 +131,27 @@ const QueryBuilder = () => {
     };
 
     const handleProceed = () => {
-        // State is already saved in Context
         navigate('/analytics/preview');
     };
+
+    // Grouping and Sorting Logic
+    const groupedSchema = useMemo(() => {
+        const omie = [];
+        const pso = [];
+
+        Object.entries(schema).forEach(([key, table]) => {
+            if (key.startsWith('OMIE_')) {
+                omie.push({ key, ...table });
+            } else {
+                pso.push({ key, ...table });
+            }
+        });
+
+        omie.sort((a, b) => a.friendlyName.localeCompare(b.friendlyName));
+        pso.sort((a, b) => a.friendlyName.localeCompare(b.friendlyName));
+
+        return { omie, pso };
+    }, [schema]);
 
     if (loading) {
         return (
@@ -134,54 +190,50 @@ const QueryBuilder = () => {
                 <Alert severity="warning" sx={{ mb: 3 }}>{error}</Alert>
             )}
 
-            <Grid container spacing={3}>
-                {Object.entries(schema).map(([key, table]) => (
-                    <Grid item xs={12} md={6} key={key}>
-                        <Accordion defaultExpanded elevation={2}>
-                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', pr: 2 }}>
-                                    <Typography variant="h6">{table.friendlyName}</Typography>
-                                    <Chip
-                                        label={`${(selectedColumns[key] || []).length} selecionados`}
-                                        size="small"
-                                        color={(selectedColumns[key] || []).length > 0 ? "primary" : "default"}
-                                    />
-                                </Box>
-                            </AccordionSummary>
-                            <Divider />
-                            <AccordionDetails>
-                                <Box sx={{ mb: 2 }}>
-                                    <Button size="small" onClick={() => handleSelectTable(key)}>
-                                        {(selectedColumns[key] || []).length === Object.keys(table.columns).length ? "Desmarcar Todos" : "Selecionar Todos"}
-                                    </Button>
-                                </Box>
-                                <FormGroup>
-                                    {Object.entries(table.columns).map(([colKey, colData]) => (
-                                        <FormControlLabel
-                                            key={colKey}
-                                            control={
-                                                <Checkbox
-                                                    checked={(selectedColumns[key] || []).includes(colKey)}
-                                                    onChange={() => handleToggleColumn(key, colKey)}
-                                                />
-                                            }
-                                            label={
-                                                <Box>
-                                                    <Typography variant="body1">{colData.label}</Typography>
-                                                    {colData.description && (
-                                                        <Typography variant="caption" color="text.secondary">{colData.description}</Typography>
-                                                    )}
-                                                </Box>
-                                            }
-                                            sx={{ mb: 1, alignItems: 'flex-start' }}
-                                        />
-                                    ))}
-                                </FormGroup>
-                            </AccordionDetails>
-                        </Accordion>
+            {/* Omie Section */}
+            {groupedSchema.omie.length > 0 && (
+                <Box sx={{ mb: 4 }}>
+                    <Typography variant="h5" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: '#1976d2' }}>
+                        <StorageIcon /> Omie ERP ({groupedSchema.omie.length})
+                    </Typography>
+                    <Divider sx={{ mb: 3 }} />
+                    <Grid container spacing={3}>
+                        {groupedSchema.omie.map(table => (
+                            <TableCard
+                                key={table.key}
+                                tableKey={table.key}
+                                tableData={table}
+                                selectedColumns={selectedColumns[table.key]}
+                                onSelectTable={handleSelectTable}
+                                onToggleColumn={handleToggleColumn}
+                            />
+                        ))}
                     </Grid>
-                ))}
-            </Grid>
+                </Box>
+            )}
+
+            {/* PSOffice Section */}
+            {groupedSchema.pso.length > 0 && (
+                <Box sx={{ mb: 4 }}>
+                    <Typography variant="h5" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: '#ed6c02' }}>
+                        <StorageIcon /> PSOffice ({groupedSchema.pso.length})
+                    </Typography>
+                    <Divider sx={{ mb: 3 }} />
+                    <Grid container spacing={3}>
+                        {groupedSchema.pso.map(table => (
+                            <TableCard
+                                key={table.key}
+                                tableKey={table.key}
+                                tableData={table}
+                                selectedColumns={selectedColumns[table.key]}
+                                onSelectTable={handleSelectTable}
+                                onToggleColumn={handleToggleColumn}
+                            />
+                        ))}
+                    </Grid>
+                </Box>
+            )}
+
         </Container>
     );
 };

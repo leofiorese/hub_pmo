@@ -45,3 +45,6 @@ Thumbs.db
 
 # --- Cobertura de Testes ---
 coverage/
+
+*.sql
+*.md

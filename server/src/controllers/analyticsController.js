@@ -34,7 +34,7 @@ const AnalyticsController = {
                 const validColumns = columns.filter(col => savedColumns[col]);
                 if (validColumns.length === 0) continue;
 
-                const selectClause = validColumns.join(', ');
+                const selectClause = validColumns.map(col => `\`${col}\``).join(', ');
 
                 // Validate and Build Filters
                 let whereClause = "";
