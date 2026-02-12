@@ -119,98 +119,73 @@ const AnalyticsController = {
                 return res.status(400).json({ error: "Dados e Prompt são obrigatórios." });
             }
 
-            // 1. Converter Dados para Markdown Table
+            // Constantes para otimização de contexto
+            const MAX_ROWS = 50;
+            const MAX_VAL_LEN = 80;
+
+            // 1. Converter Dados para Markdown Table (com sanitização)
             let dataContext = "";
+            let totalRows = 0;
+
             Object.entries(data).forEach(([tableName, rows]) => {
-                if (rows.length === 0) return;
+                if (!rows || rows.length === 0) return;
 
-                dataContext += `\n### Tabela: ${tableName}\n`;
+                const limitedRows = rows.slice(0, MAX_ROWS);
+                totalRows += limitedRows.length;
 
-                // Header
-                const columns = Object.keys(rows[0]);
-                dataContext += `| ${columns.join(' | ')} |\n`;
-                dataContext += `| ${columns.map(() => '---').join(' | ')} |\n`;
+                dataContext += `\n## ${tableName} (${limitedRows.length} linhas)\n`;
 
-                // Rows
-                rows.forEach(row => {
+                const columns = Object.keys(limitedRows[0]);
+                dataContext += `|${columns.join('|')}|\n`;
+                dataContext += `|${columns.map(() => '---').join('|')}|\n`;
+
+                limitedRows.forEach(row => {
                     const values = columns.map(col => {
-                        const val = row[col];
-                        return typeof val === 'object' ? JSON.stringify(val) : val;
+                        let val = row[col];
+
+                        // Tratar null/undefined
+                        if (val === null || val === undefined) return '-';
+
+                        // Objetos para string
+                        if (typeof val === 'object') val = JSON.stringify(val);
+
+                        val = String(val);
+
+                        // Escapar pipe que quebra Markdown
+                        val = val.replace(/\|/g, '¦');
+
+                        // Truncar valores longos
+                        if (val.length > MAX_VAL_LEN) val = val.substring(0, MAX_VAL_LEN) + '…';
+
+                        return val;
                     });
-                    dataContext += `| ${values.join(' | ')} |\n`;
+                    dataContext += `|${values.join('|')}|\n`;
                 });
             });
 
-            // 2. Montar Prompt System
-            const systemPrompt = `
-Você é um Analista de Dados Sênior da empresa.
-Sua função é analisar os dados fornecidos e responder à pergunta do usuário.
-Responda SEMPRE em formato Markdown.
-Seja direto, analítico e profissional.
-Use tópicos (bullet points) para organizar insights.
-Se houver dados financeiros, sugira tendências.
-
-
-Siga as instruções para a criação de um gráfico caso seja necessário....
-
-## Data Visualization (Charts)
-If the data analysis suggests a trend or comparison that is best visualized with a chart (and the user didn't explicitly forbid it), you MUST include a chart definition in your response.
-
-To create a chart, output a specific JSON block wrapped in a code block with the language identifier \`json-chart\`.
-
-### Chart Format
-\`\`\`json-chart
-{
-  "type": "bar" | "line" | "pie",
-  "title": "Chart Title",
-  "xKey": "key_for_x_axis_labels",
-  "series": ["key_for_y_axis_values", "second_series_key"],
-  "data": [
-    { "key_for_x_axis_labels": "Label 1", "key_for_y_axis_values": 100 },
-    { "key_for_x_axis_labels": "Label 2", "key_for_y_axis_values": 150 }
-  ]
-}
-\`\`\`
-
-### Examples
-
-**Bar Chart Example:**
-\`\`\`json-chart
-{
-  "type": "bar",
-  "title": "Project Budget Analysis",
-  "xKey": "name",
-  "series": ["budget"],
-  "data": [
-    { "name": "Alpha", "budget": 50000 },
-    { "name": "Beta", "budget": 75000 }
-  ]
-}
-\`\`\`
-
-**Pie Chart Example:**
-\`\`\`json-chart
-{
-  "type": "pie",
-  "title": "Project Status Distribution",
-  "xKey": "status",
-  "series": ["count"],
-  "data": [
-    { "status": "Active", "count": 10 },
-    { "status": "Completed", "count": 5 }
-  ]
-}
-\`\`\`
-
-DO NOT output raw JSON without the \`\`\`json-chart\`\`\` wrapper.
-DO NOT use generic markdown tables if a chart is more appropriate.
-
-Dados Disponíveis:
+            // 2. Prompt otimizado: DADOS PRIMEIRO, instruções compactas depois
+            const systemPrompt = `# DADOS REAIS (${totalRows} registros)
 ${dataContext}
-          `;
 
-            // 3. Chamar Ollama
-            // Nota: Endpoint /api/chat ou /api/generate dependendo da versão
+---
+# INSTRUÇÕES
+Analista de Dados. Use SOMENTE os dados acima. NÃO invente dados.
+- Responda em Markdown
+- Se dados insuficientes, informe
+- Seja direto e analítico
+
+## Gráficos (json-chart)
+Para visualizações, use:
+\`\`\`json-chart
+{"type":"bar|line|pie","title":"Título","xKey":"col_x","series":["col_y"],"data":[{"col_x":"A","col_y":100}]}
+\`\`\`
+Tipos: bar (comparação), line (tendência temporal), pie (proporção).
+Sempre use \`\`\`json-chart\`\`\` para gráficos.`;
+
+            // 3. Log para debug
+            console.log(`[Analytics] Enviando para Ollama: ${Object.keys(data).join(', ')} | ${totalRows} linhas | ${dataContext.length} chars`);
+
+            // 4. Chamar Ollama
             const ollamaResponse = await ollamaClient.post('/api/chat', {
                 model: model || 'qwen2.5:14b',
                 messages: [
@@ -221,6 +196,8 @@ ${dataContext}
             });
 
             const aiMessage = ollamaResponse.data.message?.content || "Sem resposta da IA.";
+
+            console.log(`[Analytics] Resposta recebida: ${aiMessage.length} chars`);
 
             return res.json({ success: true, response: aiMessage });
 

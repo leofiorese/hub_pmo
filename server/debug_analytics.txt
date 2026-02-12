@@ -1,0 +1,35 @@
+Timestamp: 2026-02-06T20:08:41.945Z
+Data Keys: OMIE_A_PAGAR, OMIE_NF_FATURADAS
+Data Context Size: 4141 chars
+Prompt: Faça uma análise da saúde financeira agrupando por ano e mês das Datas de Emissão. Considere tudo que for de Contas a Pagar como saídas e NF Faturadas como notas ficais faturadas, logo entrada. 
+
+Adicionalmente, faça um gráfico de linhas com o eixo X sendo uma série temporal. Já no eixo y use duas linhas: uma linha para o Contas a Pagar e a outra linha para as notas ficais faturadas
+
+Timestamp: 2026-02-06T20:11:00.656Z
+Data Keys: OMIE_A_PAGAR, OMIE_NF_FATURADAS
+Data Context Size: 4141 chars
+Prompt: Faça uma análise da saúde financeira agrupando por ano e mês das Datas de Emissão. Considere tudo que for de Contas a Pagar como saídas e NF Faturadas como notas ficais faturadas, logo entrada. 
+
+Adicionalmente, faça um gráfico de linhas com o eixo X sendo uma série temporal. Já no eixo y use duas linhas: uma linha para o Contas a Pagar e a outra linha para as notas ficais faturadas
+
+Timestamp: 2026-02-06T20:14:47.141Z
+Data Keys: OMIE_A_PAGAR, OMIE_NF_FATURADAS
+Data Context Size: 11215 chars
+Prompt: Faça uma análise da saúde financeira agrupando por ano e mês das Datas de Emissão. Considere tudo que for de Contas a Pagar como saídas e NF Faturadas como notas ficais faturadas, logo entrada. 
+
+Adicionalmente, faça um gráfico de linhas com o eixo X sendo uma série temporal. Já no eixo y use duas linhas: uma linha para o Contas a Pagar e a outra linha para as notas ficais faturadas
+
+Timestamp: 2026-02-06T20:19:55.299Z
+Data Keys: OMIE_A_PAGAR, OMIE_NF_FATURADAS
+Data Context Size: 4141 chars
+Prompt: Faça uma análise da saúde financeira agrupando por ano e mês das Datas de Emissão. Considere tudo que for de Contas a Pagar como saídas e NF Faturadas como notas ficais faturadas, logo entrada. 
+
+Adicionalmente, faça um gráfico de linhas com o eixo X sendo uma série temporal. Já no eixo y use duas linhas: uma linha para o Contas a Pagar e a outra linha para as notas ficais faturadas
+
+Timestamp: 2026-02-06T20:39:12.021Z
+Data Keys: OMIE_A_PAGAR, OMIE_NF_FATURADAS
+Data Context Size: 223089 chars
+Prompt: Faça uma análise da saúde financeira agrupando por ano e mês das Datas de Emissão. Considere tudo que for de Contas a Pagar como saídas e NF Faturadas como notas ficais faturadas, logo entrada. 
+
+Adicionalmente, faça um gráfico de linhas com o eixo X sendo uma série temporal. Já no eixo y use duas linhas: uma linha para o Contas a Pagar e a outra linha para as notas ficais faturadas
+
