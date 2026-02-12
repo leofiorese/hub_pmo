@@ -4,13 +4,35 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ReplayIcon from '@mui/icons-material/Replay';
+import EditNoteIcon from '@mui/icons-material/EditNote';
 import PrintIcon from '@mui/icons-material/Print';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ChartRenderer from '../../components/ChartRenderer';
+import { useAnalytics } from '../../contexts/AnalyticsContext';
+
+// CSS para impressão - esconde tudo exceto o resultado
+const printStyles = `
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    #print-area, #print-area * {
+        visibility: visible;
+    }
+    #print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        padding: 20px;
+    }
+}
+`;
 
 const AnalysisResults = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { dataPreview } = useAnalytics();
 
     // Get result from router state
     const aiResponse = location.state?.result;
@@ -28,32 +50,52 @@ const AnalysisResults = () => {
         window.print();
     };
 
+    const handleNewPrompt = () => {
+        // Navega para o PromptBuilder mantendo os dados do contexto
+        navigate('/analytics/prompt');
+    };
+
+    // Verifica se há dados anteriores disponíveis
+    const hasDataContext = dataPreview && Object.keys(dataPreview).length > 0;
+
     return (
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 8 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h4" component="h1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <AutoAwesomeIcon color="primary" /> Resultado da Análise
-                </Typography>
+        <>
+            {/* Injeta CSS de impressão */}
+            <style>{printStyles}</style>
 
-                <Box>
-                    <Button
-                        startIcon={<PrintIcon />}
-                        onClick={handlePrint}
-                        sx={{ mr: 2 }}
-                    >
-                        Exportar PDF
-                    </Button>
-                    <Button
-                        variant="contained"
-                        startIcon={<ReplayIcon />}
-                        onClick={() => navigate('/analytics')}
-                    >
-                        Nova Análise
-                    </Button>
+            <Container maxWidth="lg" sx={{ mt: 4, mb: 8 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+                    <Typography variant="h4" component="h1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <AutoAwesomeIcon color="primary" /> Resultado da Análise
+                    </Typography>
+
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        <Button
+                            startIcon={<PrintIcon />}
+                            onClick={handlePrint}
+                        >
+                            Exportar PDF
+                        </Button>
+                        {hasDataContext && (
+                            <Button
+                                variant="outlined"
+                                startIcon={<EditNoteIcon />}
+                                onClick={handleNewPrompt}
+                            >
+                                Nova Análise com Dados Anteriores
+                            </Button>
+                        )}
+                        <Button
+                            variant="contained"
+                            startIcon={<ReplayIcon />}
+                            onClick={() => navigate('/analytics')}
+                        >
+                            Nova Análise
+                        </Button>
+                    </Box>
                 </Box>
-            </Box>
 
-            <Paper sx={{ p: 4, minHeight: '60vh' }} elevation={3}>
+            <Paper id="print-area" sx={{ p: 4, minHeight: '60vh' }} elevation={3}>
                 <Box className="markdown-body">
                     <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
@@ -114,6 +156,7 @@ const AnalysisResults = () => {
                 </Typography>
             </Box>
         </Container>
+        </>
     );
 };
 
