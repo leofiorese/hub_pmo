@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import {
     Box, Typography, Paper, Container, TextField, Button,
     Alert, CircularProgress, Accordion, AccordionSummary, AccordionDetails,
-    FormControl, InputLabel, Select, MenuItem, Stack
+    FormControl, InputLabel, Select, MenuItem, Stack,
+    Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from '@mui/material';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import TableChartIcon from '@mui/icons-material/TableChart';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { ollamaService } from '../../services/ollamaService';
@@ -43,8 +45,7 @@ const PromptBuilder = () => {
                 }
             } catch (err) {
                 console.error("Failed to fetch models", err);
-                // Non-blocking error, user can still try with default or manual input if we allowed it, 
-                // but for now we just log it.
+                // Non-blocking error
             } finally {
                 setLoadingModels(false);
             }
@@ -91,7 +92,7 @@ const PromptBuilder = () => {
                 navigate('/analytics/results', {
                     state: {
                         result: response.data.response,
-                        chartData: response.data.chartConfig || null // Se backend gerar config de gráfico
+                        chartData: response.data.chartConfig || null
                     }
                 });
             } else {
@@ -131,6 +132,74 @@ const PromptBuilder = () => {
                     <Alert severity="info" icon={<AutoAwesomeIcon />}>
                         Serão analisados <strong>{totalRows} registros</strong> de <strong>{totalTables} tabelas</strong>.
                     </Alert>
+                </Box>
+
+                {/* Data Preview as 'Fieldset' to match Input Style */}
+                <Box
+                    component="fieldset"
+                    sx={{
+                        border: '1px solid',
+                        borderColor: (theme) => theme.palette.mode === 'light' ? 'rgba(0, 0, 0, 0.23)' : 'rgba(255, 255, 255, 0.23)',
+                        borderRadius: 1,
+                        p: 0,
+                        m: 0,
+                        mb: 3,
+                        '&:hover': {
+                            borderColor: (theme) => theme.palette.text.primary
+                        }
+                    }}
+                >
+                    <legend style={{ marginLeft: 10, paddingLeft: 5, paddingRight: 5, fontSize: '0.75rem', color: 'gray' }}>
+                        Visualizar Dados (Preview)
+                    </legend>
+                    <Accordion elevation={0} sx={{ bgcolor: 'transparent', '&:before': { display: 'none' }, m: 0 }}>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.primary' }}>
+                                <TableChartIcon color="action" fontSize="small" />
+                                <Typography variant="body1">
+                                    {totalTables} Tabelas, {totalRows} Linhas
+                                </Typography>
+                            </Box>
+                        </AccordionSummary>
+                        <AccordionDetails sx={{ pt: 0, px: 2, pb: 2 }}>
+                            {Object.entries(preparedData).map(([tableName, rows]) => (
+                                <Box key={tableName} sx={{ mb: 2, mt: 2 }}>
+                                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: 'text.secondary' }}>
+                                        Tabela: {tableName} ({rows.length} registros)
+                                    </Typography>
+                                    <TableContainer component={Paper} elevation={0} sx={{ maxHeight: 250, border: '1px solid', borderColor: 'divider' }}>
+                                        <Table stickyHeader size="small">
+                                            <TableHead>
+                                                <TableRow>
+                                                    {rows.length > 0 && Object.keys(rows[0]).map((col) => (
+                                                        <TableCell key={col} sx={{ fontWeight: 'bold', bgcolor: 'background.default' }}>{col}</TableCell>
+                                                    ))}
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {rows.slice(0, 10).map((row, idx) => (
+                                                    <TableRow key={idx} hover>
+                                                        {Object.values(row).map((val, i) => (
+                                                            <TableCell key={i}>
+                                                                {typeof val === 'object' ? JSON.stringify(val) : String(val)}
+                                                            </TableCell>
+                                                        ))}
+                                                    </TableRow>
+                                                ))}
+                                                {rows.length > 10 && (
+                                                    <TableRow>
+                                                        <TableCell colSpan={Object.keys(rows[0]).length} align="center" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
+                                                            ... e mais {rows.length - 10} linhas
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </TableContainer>
+                                </Box>
+                            ))}
+                        </AccordionDetails>
+                    </Accordion>
                 </Box>
 
                 <Stack spacing={3} sx={{ mb: 4 }}>
@@ -174,7 +243,7 @@ const PromptBuilder = () => {
                     </Box>
                 </Stack>
 
-                {/* Show Data Snippet (Optional/Debug) */}
+                {/* Show Data Snippet (Debug) - Keeping it collapsed by default or removing if redundant, but user might strict want it. Let's keep it closed at bottom */}
                 <Accordion variant="outlined" sx={{ mb: 4 }}>
                     <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                         <Typography variant="body2" color="text.secondary">Ver JSON enviado (Debug)</Typography>

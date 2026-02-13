@@ -70,7 +70,7 @@ const Topbar = ({ handleDrawerToggle, drawerWidth }) => {
             WebkitTextFillColor: 'transparent',
           }}
         >
-          PMO HUB
+          HUB PMO
         </Typography>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>

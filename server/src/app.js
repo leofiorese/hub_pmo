@@ -25,7 +25,7 @@ app.use('/api/analytics', analyticsRoutes); // [NEW] Analytics Routes
 app.use('/api/ollama', ollamaRoutes); // [NEW] Ollama Routes
 
 app.get('/', (req, res) => {
-    res.json({ message: '🚀 PMO Hub Backend está online!' });
+    res.json({ message: '🚀 HUB PMO Backend está online!' });
 });
 
 // Health check endpoint para Docker

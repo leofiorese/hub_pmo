@@ -1,4 +1,4 @@
-# 📘 PMO Hub & PSOffice Web - Documentação Técnica Unificada
+# 📘 HUB PMO & PSOffice Web - Documentação Técnica Unificada
 
 > **Status:** Planejamento & Arquitetura  
 > **Versão:** 1.0.0  
@@ -33,8 +33,8 @@ O sistema migrou de uma arquitetura Desktop Monolítica para uma arquitetura **W
 | **Backend** | **Node.js** + **Express** | API RESTful com arquitetura em camadas. |
 | **Database** | **MySQL 8.x** | Banco Relacional (InnoDB) com driver `mysql2`. |
 | **Auth** | **JWT** + **Bcrypt** | Autenticação Stateless e Hash de senhas. |
-| **RPA Engine** | **Playwright** | Automação de navegador headless no servidor. |
 | **AI Core** | **Ollama** (qwen2.5:14b) | LLM Local para análise inteligente de dados. |
+| **Links Management** | **Custom Controller** | Gestão dinâmica de links (PowerBI, Excel, Custom) com controle de acesso (RBAC). |
 
 ### 2.2 Padrões de Projeto (Design Patterns)
 * **Frontend:** Hooks Pattern, Context API (Estado Global).
@@ -136,26 +136,28 @@ Esta estrutura garante que a lógica de negócios não se misture com a lógica 
 
 ```text
 server/src/
-├── config/             # Configurações do projeto (Conexão DB, Variáveis de Ambiente .env)
+├── config/             # Configurações do projeto (Conexão DB, Variáveis de Ambiente .env, Ollama)
 ├── controllers/        # [Interface Adapters] Camada de Entrada:
 │                       # - Recebe a requisição HTTP (req, res)
 │                       # - Valida os dados de entrada (DTOs)
-│                       # - Chama a Service Layer
+│                       # - Chama a Service Layer (ou Repositories para casos simples como Links)
 │                       # - Retorna a resposta JSON padronizada
-├── services/           # [Use Cases] Camada de Regras de Negócio:
-│                       # - Contém a lógica pura do PMO
-│                       # - Não conhece HTTP nem SQL
-│                       # - Orquestra as chamadas aos Repositórios
+│                       # - Controllers: Auth, Admin, Profile, Links, Analytics, Ollama
+├── services/           # [Use Cases] Camada de Regras de Negócio
 ├── repositories/       # [Data Access] Camada de Persistência:
 │                       # - Executa queries SQL diretas
 │                       # - Gerencia transações com o MySQL
-├── models/             # [Entities] Camada de Domínio:
-│                       # - Classes e interfaces que definem os dados (User, Project)
+│                       # - Repositories: LinkRepository, UserRepository, etc.
+├── models/             # [Entities] Camada de Domínio
 ├── middlewares/        # Interceptadores de Requisição:
 │                       # - AuthGuard (Validação de Token)
 │                       # - Logger (Auditoria)
 │                       # - ErrorHandler (Tratamento global de erros)
-├── routes/             # Definição das Rotas da API (Express Router)
+├── routes/             # Definição das Rotas da API (Express Router):
+│                       # - /api/auth, /api/admin, /api/profile
+│                       # - /api/links (Gestão de Links)
+│                       # - /api/analytics (Query Builder + AI)
+│                       # - /api/ollama (Proxy para LLM)
 └── utils/              # Funções utilitárias e helpers
 ```
 
@@ -307,7 +309,11 @@ client/src/
 2.1.4.1 Deve permitir criação, edição, listagem e exclusão de usuários.
 2.1.4.2 Deve permitir ativar e desativar usuários.
 
-#### 2.1.5 Gestão de Projetos
+#### 2.1.5 Gestão de Links Dinâmicos
+
+2.1.5.1 **CRUD de Links**: Admin pode criar/editar/remover links para recursos externos (PowerBI, Excel, Outros).
+2.1.5.2 **Controle de Acesso (RBAC)**: Cada link possui uma lista de roles permitidas (admin, pmo, manager, viewer).
+2.1.5.3 **Categorização**: Links são categorizados (pbi, excel, custom) e possuem chaves únicas para acesso via rota dinâmica.
 
 2.1.5.1 Deve fornecer endpoints para gerenciamento de projetos do PMO.
 2.1.5.2 Deve armazenar status, responsáveis e prazos.
