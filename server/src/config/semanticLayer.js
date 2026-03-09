@@ -228,6 +228,20 @@ const SEMANTIC_LAYER = {
         friendlyName: "Resumo de Horas",
         tableName: "psoffice.resumo_de_horas",
         columns: { RESHR_ID: { label: "ID", type: "number" }, USU_ID: { label: "ID Usuário", type: "number" }, DT_INICIO: { label: "Data Início", type: "date" } }
+    },
+
+    // ==========================================================================================
+    // DADOS MOCK (mock)
+    // ==========================================================================================
+    MOCK_FINANCEIRO: {
+        friendlyName: "Dados Financeiros (Mock)",
+        tableName: "mock.financeiro",
+        description: "Dados financeiros simulados para testes e desenvolvimento (Jan-Mai 2026, 54 registros)",
+        columns: {
+            Data: { label: "Data do Lançamento", type: "date" },
+            Valor: { label: "Valor (R$)", type: "money" },
+            "Categoria de Gasto": { label: "Categoria de Gasto", type: "string" }
+        }
     }
 };
 

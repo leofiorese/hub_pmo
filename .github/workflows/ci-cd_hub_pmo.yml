@@ -1,0 +1,353 @@
+# ============================================================
+# Hub PMO — CI/CD Pipeline (GitHub Actions)
+#
+# Estratégia: Self-hosted runner de ORGANIZAÇÃO instalado na VM
+# Runner: vm-sandech  Labels: [self-hosted, linux, vmteste02]
+# Motivo: VM em rede local e centralização de runners
+#
+# Pipeline: lint (frontend/backend) → test → audit-performance → build → deploy → notify-success / notify-failure
+# Webhook Habilitado: Microsoft Teams
+# ============================================================
+
+name: CI/CD Hub PMO
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+permissions:
+    contents: read
+    statuses: write
+    actions: write
+
+jobs:
+    # ──────────────────────────────────────────────────────────
+    # JOB 1: LINT
+    # ──────────────────────────────────────────────────────────
+    lint:
+        name: "Lint (ESLint)"
+        runs-on: [self-hosted, vmteste02]
+        timeout-minutes: 10
+
+        steps:
+            - name: Checkout do código
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js 24
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "24"
+
+            # ── Frontend ──
+            - name: Instalar dependências — Frontend
+              run: cd client && npm ci
+
+            - name: Lint Frontend
+              run: cd client && npm run lint
+
+            # ── Backend ──
+            - name: Instalar dependências — Backend
+              run: cd server && npm ci
+
+            - name: Lint Backend
+              run: cd server && npm run lint
+
+    # ──────────────────────────────────────────────────────────
+    # JOB 2: TEST
+    # ──────────────────────────────────────────────────────────
+    test:
+        name: "Testes Automatizados"
+        runs-on: [self-hosted, vmteste02]
+        needs: lint
+        timeout-minutes: 10
+
+        steps:
+            - name: Checkout do código
+              uses: actions/checkout@v4
+
+            - name: Executar testes (Placeholder)
+              run: |
+                  echo "==========================================="
+                  echo "⚠️  Cobertura de testes unitários aguardando spec oficial."
+                  echo "==========================================="
+                  exit 0
+
+    # ──────────────────────────────────────────────────────────
+    # JOB 3: AUDITORIA LIGHTHOUSE CI
+    # ──────────────────────────────────────────────────────────
+    audit-performance:
+        name: "Lighthouse CI (Performance & A11y)"
+        runs-on: [self-hosted, vmteste02]
+        needs: test
+        timeout-minutes: 20
+        outputs:
+            perf_score: ${{ steps.lhci-scores.outputs.perf }}
+            a11y_score: ${{ steps.lhci-scores.outputs.a11y }}
+            bp_score: ${{ steps.lhci-scores.outputs.bp }}
+            lhci_report: ${{ steps.lhci-report.outputs.lhci_report }}
+
+        steps:
+            - name: Checkout do código
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js 24
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "24"
+
+            - name: Instalar dependências — Frontend
+              run: cd client && npm ci
+
+            - name: Verificar Chrome para Lighthouse CI
+              run: |
+                  for cmd in google-chrome-stable google-chrome chromium-browser chromium; do
+                    if command -v "$cmd" &>/dev/null; then
+                      CHROME_BIN="$(command -v "$cmd")"
+                      if "$CHROME_BIN" --headless --no-sandbox --disable-gpu --version &>/dev/null; then
+                        echo "✅ Chrome: $("$CHROME_BIN" --version 2>/dev/null)"
+                        exit 0
+                      fi
+                    fi
+                  done
+                  echo "❌ Chrome não encontrado ou não executa no runner."
+                  exit 1
+
+            - name: Instalar @lhci/cli
+              run: npm install -g @lhci/cli
+
+            - name: Build Frontend para Lighthouse (base=/)
+              run: cd client && npm run lhci:build
+
+            - name: Limpar reports anteriores
+              run: rm -f client/.lighthouseci/*
+
+            - name: Executar auditoria Lighthouse CI
+              run: cd client && lhci autorun
+              env:
+                  LHCI_BUILD_CONTEXT__CURRENT_HASH: ${{ github.sha }}
+                  LHCI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Extrair scores do Lighthouse
+              id: lhci-scores
+              if: always()
+              run: |
+                  python3 - << 'PYEOF'
+                  import json, glob, sys, os
+                  files = sorted(glob.glob('client/.lighthouseci/lhr-*.json'))
+                  out_file = open(os.environ.get('GITHUB_OUTPUT', '/dev/stdout'), 'a')
+                  if not files:
+                      out_file.write('perf=N/A\na11y=N/A\nbp=N/A\n')
+                      out_file.close()
+                      sys.exit(0)
+                  mid = files[len(files) // 2]
+                  with open(mid) as f:
+                      data = json.load(f)
+                  cats = data.get('categories', {})
+                  perf = round((cats.get('performance',     {}).get('score') or 0) * 100)
+                  a11y = round((cats.get('accessibility',   {}).get('score') or 0) * 100)
+                  bp   = round((cats.get('best-practices',  {}).get('score') or 0) * 100)
+                  out_file.write(f'perf={perf}\na11y={a11y}\nbp={bp}\n')
+                  out_file.close()
+                  print(f'Lighthouse: Perf={perf}/100 | A11y={a11y}/100 | BP={bp}/100')
+                  PYEOF
+
+            - name: Gerar relatório resumido
+              id: lhci-report
+              if: always()
+              run: |
+                  python3 - << 'PYEOF'
+                  import json, glob, os
+                  from datetime import datetime
+                  files = sorted(glob.glob('client/.lighthouseci/lhr-*.json'))
+                  if not files:
+                      exit(0)
+                  mid = files[len(files) // 2]
+                  with open(mid) as f:
+                      median_data = json.load(f)
+                  median_cats = median_data.get('categories', {})
+
+                  webhook_lines = []
+                  webhook_lines.append('Lighthouse CI (mediana):')
+                  for cat_key, cat_label in [('performance', 'Performance'), ('accessibility', 'Accessibility'), ('best-practices', 'Best Practices')]:
+                      cat = median_cats.get(cat_key, {})
+                      score = cat.get('score')
+                      if score is not None:
+                          pct = round(score * 100)
+                          icon = 'pass' if pct >= 90 else 'warn' if pct >= 70 else 'FAIL'
+                          webhook_lines.append(f'  {cat_label}: {pct}/100 [{icon}]')
+
+                  gh_out = os.environ.get('GITHUB_OUTPUT', '')
+                  if gh_out:
+                      webhook_text = '\n'.join(webhook_lines)
+                      safe = json.dumps(webhook_text)[1:-1]
+                      with open(gh_out, 'a') as f:
+                          f.write(f'lhci_report={safe}\n')
+                  PYEOF
+
+            - name: Upload relatórios Lighthouse
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: lighthouse-reports-${{ github.run_id }}
+                  path: client/.lighthouseci/
+                  include-hidden-files: true
+                  retention-days: 30
+
+    # ──────────────────────────────────────────────────────────
+    # JOB 4: BUILD (Docker Compose)
+    # ──────────────────────────────────────────────────────────
+    build:
+        name: "Build Docker Hub PMO"
+        runs-on: [self-hosted, vmteste02]
+        needs: audit-performance
+        timeout-minutes: 30
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+        steps:
+            - name: Checkout do código
+              uses: actions/checkout@v4
+
+            - name: Restaurar .env restrito da VM
+              run: |
+                  if [ ! -f $HOME/dev/secrets/hub-pmo-secrets/server.env ]; then
+                    echo "❌ ERRO: Secrets da Hub PMO não encontrados ($HOME/dev/secrets/hub-pmo-secrets/server.env)!"
+                    exit 1
+                  fi
+                  cp $HOME/dev/secrets/hub-pmo-secrets/server.env server/.env
+                  echo "✅ Arquivos .env devidamente restaurados na staging area de build."
+
+            - name: Validar configuração
+              run: docker compose config --quiet
+
+            - name: Construir Imagens Docker
+              run: docker compose build
+
+    # ──────────────────────────────────────────────────────────
+    # JOB 5: DEPLOY & CHECKS
+    # ──────────────────────────────────────────────────────────
+    deploy:
+        name: "Deploy na VM"
+        runs-on: [self-hosted, vmteste02]
+        needs: build
+        timeout-minutes: 15
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+        steps:
+            - name: Checkout do código
+              uses: actions/checkout@v4
+
+            - name: Restaurar .env restrito
+              run: |
+                  cp $HOME/dev/secrets/hub-pmo-secrets/server.env server/.env
+
+            - name: Subida Docker Compose (up)
+              run: |
+                  echo "🚀 Starting Hub PMO Deploy..."
+                  docker compose up -d --remove-orphans
+                  echo "✅ Deploy de arquitetura finalizado."
+
+            - name: Restart Nginx Proxy Relays
+              run: |
+                  # Reinicia Nginx para buscar IPs atualizados dentro do context caso necessário (depende da org setup)
+                  docker ps | grep nginx && docker compose restart nginx || echo "Nginx gerenciado separadamente, pulando restart local"
+
+            - name: Healthcheck Backend
+              run: |
+                  echo "⏳ Validando saude do core Backend Hub PMO"
+                  curl -f --retry 12 --retry-delay 5 --retry-connrefused http://localhost:7000/api/health \
+                    && echo "✅ API Backend respondendo" || exit 1
+
+    # ──────────────────────────────────────────────────────────
+    # JOB 6: NOTIFICAR SUCESSO OU FALHA (Microsoft Teams)
+    # ──────────────────────────────────────────────────────────
+    notify-failure:
+        name: "Notificar Falha Teams"
+        runs-on: [self-hosted, vmteste02]
+        needs: [lint, test, audit-performance, build, deploy]
+        if: failure()
+        timeout-minutes: 5
+        steps:
+            - name: Enviar notificação de Falha via Teams
+              if: ${{ vars.TEAMS_ENABLED == 'true' }}
+              env:
+                  TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+              run: |
+                  RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  LHCI_REPORT="${{ needs.audit-performance.outputs.lhci_report }}"
+                  curl -f -X POST \
+                    -H 'Content-type: application/json' \
+                    --data "{
+                      \"type\": \"message\",
+                      \"attachments\": [{
+                        \"contentType\": \"application/vnd.microsoft.card.adaptive\",
+                        \"content\": {
+                          \"\$schema\": \"http://adaptivecards.io/schemas/adaptive-card.json\",
+                          \"type\": \"AdaptiveCard\",
+                          \"version\": \"1.4\",
+                          \"body\": [
+                            {\"type\": \"TextBlock\", \"text\": \"❌ Pipeline Hub PMO falhou!\", \"weight\": \"Bolder\", \"color\": \"Attention\", \"size\": \"Medium\"},
+                            {\"type\": \"FactSet\", \"facts\": [
+                              {\"title\": \"Branch\",     \"value\": \"${{ github.ref_name }}\"},
+                              {\"title\": \"Autor\",      \"value\": \"${{ github.actor }}\"}
+                            ]},
+                            {\"type\": \"TextBlock\", \"text\": \"${LHCI_REPORT:-N/A}\", \"wrap\": true, \"fontType\": \"Monospace\", \"size\": \"Small\"}
+                          ],
+                          \"actions\": [{
+                            \"type\": \"Action.OpenUrl\",
+                            \"title\": \"Ver Logs\",
+                            \"url\": \"${RUN_URL}\"
+                          }]
+                        }
+                      }]
+                    }" \
+                    "$TEAMS_WEBHOOK_URL"
+
+    notify-success:
+        name: "Notificar Sucesso Teams"
+        runs-on: [self-hosted, vmteste02]
+        needs: [audit-performance, deploy]
+        if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.deploy.result == 'success' }}
+        timeout-minutes: 5
+        steps:
+            - name: Enviar notificação de Sucesso via Teams
+              if: ${{ vars.TEAMS_ENABLED == 'true' }}
+              env:
+                  TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+              run: |
+                  RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  PERF="${{ needs.audit-performance.outputs.perf_score }}"
+                  A11Y="${{ needs.audit-performance.outputs.a11y_score }}"
+                  BP="${{ needs.audit-performance.outputs.bp_score }}"
+                  curl -f -X POST \
+                    -H 'Content-type: application/json' \
+                    --data "{
+                      \"type\": \"message\",
+                      \"attachments\": [{
+                        \"contentType\": \"application/vnd.microsoft.card.adaptive\",
+                        \"content\": {
+                          \"\$schema\": \"http://adaptivecards.io/schemas/adaptive-card.json\",
+                          \"type\": \"AdaptiveCard\",
+                          \"version\": \"1.4\",
+                          \"body\": [
+                            {\"type\": \"TextBlock\", \"text\": \"✅ Deploy Hub PMO concluído com sucesso!\", \"weight\": \"Bolder\", \"color\": \"Good\", \"size\": \"Medium\"},
+                            {\"type\": \"FactSet\", \"facts\": [
+                              {\"title\": \"Branch\",          \"value\": \"${{ github.ref_name }}\"},
+                              {\"title\": \"Autor\",           \"value\": \"${{ github.actor }}\"},
+                              {\"title\": \"Performance\",     \"value\": \"${PERF:-N/A} / 100\"},
+                              {\"title\": \"Acessibilidade\",  \"value\": \"${A11Y:-N/A} / 100\"}
+                            ]}
+                          ],
+                          \"actions\": [
+                            {\"type\": \"Action.OpenUrl\", \"title\": \"Acessar Hub PMO\",           \"url\": \"http://interno.sandech.local:8500/pmohub/\"},
+                            {\"type\": \"Action.OpenUrl\", \"title\": \"Ver Relatórios Lighthouse\",  \"url\": \"${RUN_URL}\"}
+                          ]
+                        }
+                      }]
+                    }" \
+                    "$TEAMS_WEBHOOK_URL"

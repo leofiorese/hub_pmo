@@ -1,6 +1,7 @@
 const { getAvailableSchemas, SEMANTIC_LAYER } = require('../config/semanticLayer');
 const db = require('../config/db');
 const ollamaClient = require('../config/ollama');
+const { mockFinancialData } = require('../data/mockFinancialData');
 
 const AnalyticsController = {
     // 1. Schema
@@ -62,9 +63,60 @@ const AnalyticsController = {
                 }
 
                 // Executar Query (Mock vs Real)
-                if (tableKey === 'FINANCIAL') {
-                    // Mock Data Implementation with filtering
-                    var mockData = [
+                if (tableKey === 'MOCK_FINANCEIRO') {
+                    console.log('[Analytics] Usando dados MOCK para MOCK_FINANCEIRO');
+
+                    // Clonar dados mock
+                    let mockData = [...mockFinancialData];
+
+                    // Aplicar filtros JavaScript (já que não é query SQL)
+                    if (filters && filters[tableKey] && Array.isArray(filters[tableKey])) {
+                        mockData = mockData.filter(row => {
+                            return filters[tableKey].every(filter => {
+                                const { column, operator, value } = filter;
+                                const cellValue = row[column];
+
+                                // Aplicar operadores
+                                switch (operator) {
+                                    case '=':
+                                        return String(cellValue) === String(value);
+                                    case '>':
+                                        return parseFloat(cellValue) > parseFloat(value);
+                                    case '<':
+                                        return parseFloat(cellValue) < parseFloat(value);
+                                    case '>=':
+                                        return parseFloat(cellValue) >= parseFloat(value);
+                                    case '<=':
+                                        return parseFloat(cellValue) <= parseFloat(value);
+                                    case '!=':
+                                        return String(cellValue) !== String(value);
+                                    case 'LIKE':
+                                        return String(cellValue).toLowerCase().includes(String(value).toLowerCase());
+                                    default:
+                                        return true;
+                                }
+                            });
+                        });
+                    }
+
+                    // Selecionar apenas colunas solicitadas
+                    mockData = mockData.map(row => {
+                        const filtered = {};
+                        validColumns.forEach(col => {
+                            if (row.hasOwnProperty(col)) {
+                                filtered[col] = row[col];
+                            }
+                        });
+                        return filtered;
+                    });
+
+                    // Limitar a 50 registros (como nas queries reais)
+                    resultData[tableKey] = mockData.slice(0, 50);
+
+                    console.log(`[Analytics] Mock retornou ${resultData[tableKey].length} registros`);
+                } else if (tableKey === 'FINANCIAL') {
+                    // Mock Data antigo (mantido para compatibilidade)
+                    var oldMockData = [
                         { date: '2023-01-01', value: 1500.00, category: 'Software', description: 'Licença' },
                         { date: '2023-01-05', value: 200.00, category: 'Infra', description: 'Cabo' },
                         { date: '2023-02-10', value: 3500.00, category: 'Serviços', description: 'Consultoria' },
@@ -73,7 +125,7 @@ const AnalyticsController = {
 
                     // Simple JS Filter for Mock Data
                     if (filters && filters[tableKey]) {
-                        mockData = mockData.filter(row => {
+                        oldMockData = oldMockData.filter(row => {
                             return filters[tableKey].every(f => {
                                 const val = row[f.column];
                                 const target = f.value;
@@ -91,7 +143,7 @@ const AnalyticsController = {
                         });
                     }
 
-                    resultData[tableKey] = mockData;
+                    resultData[tableKey] = oldMockData;
                 } else {
                     // Real DB Query Construction
                     const query = `SELECT ${selectClause} FROM ${tableName} ${whereClause} LIMIT 50`;

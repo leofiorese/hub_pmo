@@ -1,8 +1,8 @@
 # 📘 HUB PMO & PSOffice Web - Documentação Técnica Unificada
 
-> **Status:** Planejamento & Arquitetura  
-> **Versão:** 1.0.0  
-> **Data:** 20/12/2025  
+> **Status:** ✅ Em Produção
+> **Versão:** 2.0.0
+> **Data:** 24/02/2026
 > **Responsável Técnico:** Engenharia de Software (PMO)
 
 ---
@@ -26,15 +26,19 @@ O sistema migrou de uma arquitetura Desktop Monolítica para uma arquitetura **W
 
 ### 2.1 Stack Tecnológica
 
-| Camada | Tecnologia | Descrição |
-| :--- | :--- | :--- |
-| **Frontend** | **React.js** (Vite) | Single Page Application (SPA). Javascript ES6+. |
-| **UI Library** | **Material UI (MUI)** | Componentes visuais seguindo identidade corporativa. |
-| **Backend** | **Node.js** + **Express** | API RESTful com arquitetura em camadas. |
-| **Database** | **MySQL 8.x** | Banco Relacional (InnoDB) com driver `mysql2`. |
-| **Auth** | **JWT** + **Bcrypt** | Autenticação Stateless e Hash de senhas. |
-| **AI Core** | **Ollama** (qwen2.5:14b) | LLM Local para análise inteligente de dados. |
-| **Links Management** | **Custom Controller** | Gestão dinâmica de links (PowerBI, Excel, Custom) com controle de acesso (RBAC). |
+| Camada | Tecnologia | Versão | Descrição |
+| :--- | :--- | :--- | :--- |
+| **Frontend** | **React.js** + **Vite** | 19.2.0 + 7.2.4 | Single Page Application (SPA). Javascript ES6+. |
+| **UI Library** | **Material UI (MUI)** | 7.3.6 | Componentes visuais seguindo identidade corporativa. |
+| **Routing** | **React Router DOM** | 7.11.0 | Gerenciamento de rotas com proteção via `PrivateRoute`. |
+| **Charts** | **Recharts** | 3.7.0 | Gráficos responsivos para visualização de dados da IA. |
+| **Markdown** | **React Markdown** + **remark-gfm** | 10.1.0 + 4.0.1 | Renderização de Markdown com suporte a tabelas GFM. |
+| **Backend** | **Node.js** + **Express** | 5.2.1 | API RESTful com arquitetura em camadas (Clean Architecture + MSC). |
+| **Database** | **MySQL 8.x** (3 bancos) | 8.x | Bancos Relacionais: pso_hub_db, omie_db, psoffice (InnoDB). |
+| **Auth** | **JWT** + **bcryptjs** | 9.0.3 + 3.0.3 | Autenticação Stateless e Hash de senhas (10 rounds). |
+| **AI Core** | **Ollama** (qwen2.5:14b) | ✅ Ativo | LLM Local para análise inteligente de dados com geração de gráficos. |
+| **Links Management** | **Custom Controller** | - | Gestão dinâmica de links (PowerBI, Excel, Custom) com RBAC. |
+| **Deployment** | **Docker Compose** + **PM2** | - | Containers (Frontend: 7001, Backend: 7000) ou PM2 cluster mode. |
 
 ### 2.2 Padrões de Projeto (Design Patterns)
 * **Frontend:** Hooks Pattern, Context API (Estado Global).
@@ -50,44 +54,96 @@ A interface deve refletir estritamente a marca da **SANDECH Engenharia**.
 ### 3.1 Tokens de Estilo
 * **Cores Primárias:**
     * Light Mode: `#91121F` (Vermelho Sandech / Bordô).
-    * Dark Mode: `#EF5350` (Vermelho Suave - Acessibilidade).
+    * Dark Mode: `#E53E3E` (Vermelho Suave - Acessibilidade).
 * **Backgrounds:**
     * Light: `#F4F6F8` (Cinza Gelo Corporativo).
     * Dark: `#121212` (Padrão Material Design).
-* **Tipografia:** Fonte `Roboto` (Pesos: 300, 400, 500, 700).
+* **Tipografia:**
+    * Headings: `Outfit` (Pesos: 400, 500, 600, 700).
+    * Body: `Inter` (Pesos: 300, 400, 500).
+    * Fallback: `Roboto` (Pesos: 300, 400, 500, 700).
+* **Raio de Borda:**
+    * Cards: `16px`
+    * Buttons: `50px` (rounded)
+    * Dialogs: `24px`
 
 ### 3.2 Layout Mestre ("The Shell")
-* **Sidebar (Menu Lateral):** Persistente. Menus agrupados por contexto (Ferramentas, Power BI, Excel). Uso de *Accordions* para sub-menus.
-* **Topbar (Cabeçalho):** Identificação do Usuário, Breadcrumbs e Toggle de Tema (Claro/Escuro).
-* **Content:** Renderização dinâmica via React Router.
+* **Sidebar (Menu Lateral):**
+    * Colapsável (260px expandida, 70px colapsada).
+    * Menus agrupados por contexto (Dashboard, Analytics IA, Power BI, Excel, Admin).
+    * Uso de *Accordions* para sub-menus.
+    * Links dinâmicos carregados do banco (tabela `app_links`).
+* **Topbar (Cabeçalho):**
+    * Identificação do Usuário (nome + avatar).
+    * Toggle de Tema (Claro/Escuro) com persistência no localStorage.
+    * Menu de perfil (Meu Perfil, Logout).
+* **Content:** Renderização dinâmica via React Router 7 com `<Outlet />`.
+* **PrivateRoute:** Wrapper que protege rotas autenticadas verificando token JWT.
 
 ---
 
 ## 4. Infraestrutura de Dados (MySQL)
 
-Modelagem focada em integridade, performance e auditoria.
+Modelagem focada em integridade, performance e auditoria. O sistema utiliza **três bancos de dados MySQL 8.x** distintos:
 
-### 4.1 Script DDL (Inicialização do Banco)
+1. **pso_hub_db**: Dados da aplicação (usuários, links, logs)
+2. **omie_db**: Dados financeiros do ERP Omie
+3. **psoffice**: Dados de gerenciamento de projetos PSOffice
+
+### 4.1 Banco Principal (pso_hub_db)
+
+#### 4.1.1 Tabela `users` (Autenticação e RBAC)
 
 ```sql
--- Configuração de Encoding e Criação do Banco
 CREATE DATABASE IF NOT EXISTS pso_hub_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE pso_hub_db;
 
--- 1. Tabela de Usuários (RBAC)
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     role ENUM('admin', 'pmo', 'manager', 'viewer') DEFAULT 'viewer',
+    approved BOOLEAN DEFAULT FALSE,  -- Aprovação manual por admin
+    reset_token VARCHAR(255),         -- Token para reset de senha
+    reset_expires DATETIME,           -- Expiração do token
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_user_email (email),
-    INDEX idx_user_active (active)
+    INDEX idx_user_active (active),
+    INDEX idx_user_approved (approved)
 ) ENGINE=InnoDB;
+```
 
--- 2. Tabela de Projetos (Core Domain)
+**Regras de Negócio:**
+- Email deve ser do domínio `@sandech.com.br`
+- Novos usuários registrados com `approved=FALSE`
+- Admin deve aprovar manualmente para habilitar login
+- Token JWT com expiração de 1 dia
+
+#### 4.1.2 Tabela `app_links` (Gestão Dinâmica de Links)
+
+```sql
+CREATE TABLE IF NOT EXISTS app_links (
+    link_key VARCHAR(100) PRIMARY KEY,  -- Ex: "pbi_1707123456789"
+    title VARCHAR(150) NOT NULL,
+    url TEXT NOT NULL,
+    category ENUM('pbi', 'excel', 'custom') NOT NULL,
+    allowed_roles JSON NOT NULL,  -- Ex: ["admin", "pmo"]
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_link_category (category)
+) ENGINE=InnoDB;
+```
+
+**Funcionalidade:**
+- Links para Power BI, Excel Online e recursos customizados
+- Controle de acesso por role via JSON array
+- Rota dinâmica: `/pbi/:key` valida permissão antes de exibir iframe
+
+#### 4.1.3 Tabela `projects` (Gestão de Projetos - Planejado)
+
+```sql
 CREATE TABLE IF NOT EXISTS projects (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(150) NOT NULL,
@@ -102,29 +158,47 @@ CREATE TABLE IF NOT EXISTS projects (
     CONSTRAINT fk_project_manager FOREIGN KEY (manager_id) REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_project_status (status)
 ) ENGINE=InnoDB;
+```
 
--- 3. Tabela de Histórico de KPIs (Analytics)
-CREATE TABLE IF NOT EXISTS project_kpis (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    project_id INT NOT NULL,
-    kpi_name VARCHAR(50) NOT NULL,
-    kpi_value DECIMAL(10, 2) NOT NULL,
-    measured_at DATE NOT NULL,
-    CONSTRAINT fk_kpi_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+#### 4.1.4 Tabela `audit_logs` (Auditoria - Planejado)
 
--- 4. Tabela de Auditoria (Logs de Segurança)
+```sql
 CREATE TABLE IF NOT EXISTS audit_logs (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id INT,
-    action VARCHAR(50) NOT NULL, -- Ex: 'LOGIN', 'DELETE_PROJECT'
+    action VARCHAR(50) NOT NULL,  -- Ex: 'LOGIN', 'UPDATE_USER', 'DELETE_LINK'
     resource VARCHAR(100),
-    details JSON, -- Flexibilidade para armazenar payloads
+    details JSON,
     ip_address VARCHAR(45),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_audit_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-    INDEX idx_audit_created (created_at)
+    INDEX idx_audit_created (created_at),
+    INDEX idx_audit_user (user_id)
 ) ENGINE=InnoDB;
+```
+
+### 4.2 Banco Omie (omie_db)
+
+Contém dados financeiros importados do ERP Omie:
+
+- **a_pagar**: Contas a pagar
+- **nf_faturadas**: Notas fiscais emitidas e faturadas
+- **notas_debito**: Notas de débito
+
+### 4.3 Banco PSOffice (psoffice)
+
+Contém dados de gerenciamento de projetos:
+
+- **projetos**: Cadastro de projetos
+- **atividades**: Tarefas dos projetos
+- **apontamentos**: Horas trabalhadas
+- **faturamento**: Registros de faturamento e notas fiscais
+- **empresas**: Cadastro de clientes e fornecedores
+- **colaboradores** (info_colabs): Informações dos colaboradores
+- **despesas**: Despesas lançadas nos projetos
+- **atribuicoes**: Alocação de recursos em atividades
+
+**Semantic Layer:** Arquivo `config/semanticLayer.js` mapeia todas essas tabelas para nomes amigáveis usados pela IA.
 
 ## 5. Estrutura de Diretórios (Codebase)
 
@@ -248,11 +322,44 @@ client/src/
 
 #### 1.1.11 Módulo de Analytics com IA
 
-1.1.11.1 **Wizard de Análise**: Interface passo-a-passo (Welcome -> QueryBuilder -> DataPreview -> PromptBuilder -> Results).
-1.1.11.2 **Preview Interativo**: Visualização tabular dos dados com ajuste dinâmico de altura e overlay de carregamento (UX Smooth).
-1.1.11.3 **Filtros Dinâmicos**: Possibilidade de criar filtros complexos para refinar o dataset antes da análise.
-1.1.11.4 **Resultados em Markdown**: Renderização rica da resposta da IA.
-1.1.11.5 **Persistência de Estado**: Uso de `AnalyticsContext` para manter seleções e filtros ao navegar entre etapas.
+1.1.11.1 **Wizard de Análise**: Interface passo-a-passo em 5 etapas:
+   - Welcome: Introdução e instruções
+   - QueryBuilder: Seleção de tabelas e aplicação de filtros (`>`, `<`, `=`, `LIKE`, `BETWEEN`)
+   - DataPreview: Visualização interativa dos dados (máx 50 linhas por tabela)
+   - PromptBuilder: Seleção de modelo Ollama e escrita do prompt de análise
+   - Results: Exibição da resposta da IA em Markdown + gráficos
+
+1.1.11.2 **Preview Interativo**:
+   - Visualização tabular com virtualização para performance
+   - Ajuste dinâmico de altura conforme dados
+   - Overlay de carregamento (UX Smooth)
+   - Indicador de quantidade de linhas retornadas
+
+1.1.11.3 **Filtros Dinâmicos**:
+   - Suporte a múltiplos filtros por tabela
+   - Operadores: `>` (maior), `<` (menor), `=` (igual), `LIKE` (contém), `BETWEEN` (entre)
+   - Validação de tipos (número, data, texto)
+   - Construção segura de WHERE clause com parametrização
+
+1.1.11.4 **Resultados em Markdown**:
+   - Renderização via `react-markdown` + `remark-gfm`
+   - Suporte a tabelas GitHub Flavored Markdown
+   - Blocos de código com syntax highlighting
+   - Renderização de gráficos via `ChartRenderer` (intercepta blocos ```json-chart```)
+
+1.1.11.5 **Persistência de Estado**:
+   - Uso de `AnalyticsContext` para manter:
+     - Tabelas selecionadas
+     - Filtros aplicados
+     - Dados do preview
+     - Modelo de IA selecionado
+     - Prompt do usuário
+   - Navegação entre etapas sem perda de dados
+
+1.1.11.6 **Geração de Gráficos pela IA**:
+   - IA pode retornar gráficos em formato JSON dentro de blocos de código
+   - Formato: `type` (bar/line/pie/area), `data` (array), `xKey`, `yKey`
+   - Renderização automática via Recharts (ResponsiveContainer + Chart components)
 
 ---
 
@@ -345,10 +452,57 @@ client/src/
 
 #### 2.1.11 Motor de Análise (AI Engine)
 
-2.1.11.1 **Semantic Layer**: Camada de configuração que mapeia colunas do banco para nomes amigáveis e define whitelists de segurança.
-2.1.11.2 **SQL Dinâmico Seguro**: Construção de queries baseada em filtros validados, prevenindo injeção de SQL.
-2.1.11.3 **Integração Ollama**: Comunicação via HTTP com instância local do Ollama para processamento de prompts.
-2.1.11.4 **Sanitização de Contexto**: Limitação automática de linhas (Top 50) e formatação otimizada para reduzir uso de tokens.
+2.1.11.1 **Semantic Layer** (`config/semanticLayer.js`):
+   - Camada de configuração que mapeia colunas do banco para nomes amigáveis
+   - Define tipos de dados (string, number, date, money, boolean)
+   - Suporta colunas computadas via `sqlExpr` (ex: `(col1 / NULLIF(col2, 0)) * 100`)
+   - Whitelist de segurança: apenas tabelas mapeadas podem ser consultadas
+   - Exemplo de estrutura:
+     ```javascript
+     PSO_PROJETOS: {
+         friendlyName: "Projetos",
+         tableName: "psoffice.projetos",
+         description: "Cadastro principal de projetos",
+         columns: {
+             PROJ_ID: { label: "ID Projeto", type: "number" },
+             NOME: { label: "Nome do Projeto", type: "string" }
+         }
+     }
+     ```
+
+2.1.11.2 **SQL Dinâmico Seguro**:
+   - Construção de queries baseada em filtros validados
+   - Parametrização com `?` placeholders (proteção contra SQL Injection)
+   - Validação de nomes de tabelas contra semantic layer
+   - Limitação automática a 50 linhas por tabela (LIMIT 50)
+
+2.1.11.3 **Integração Ollama** (`config/ollama.js`):
+   - Cliente Axios configurado para `OLLAMA_URL` (padrão: http://localhost:11434)
+   - Endpoint principal: `POST /api/chat`
+   - Modelo padrão: `qwen2.5:14b` (executado localmente)
+   - Streaming: Desabilitado nesta versão (resposta completa)
+
+2.1.11.4 **Sanitização de Contexto**:
+   - Conversão de JSON para tabelas Markdown:
+     - Valores `null` → string vazia
+     - Objetos → `JSON.stringify()`
+     - Strings longas → truncadas em 80 caracteres
+     - Pipes `|` → escapados (`\|`) para não quebrar tabelas
+   - Limitação automática de linhas (Top 50) para evitar context overflow
+   - System prompt com instruções:
+     - "Você é um Analista de Dados"
+     - "Use SOMENTE os dados fornecidos. NÃO invente dados."
+     - Esquema JSON para geração de gráficos (```json-chart```)
+
+2.1.11.5 **Fluxo de Processamento**:
+   1. Frontend → `POST /api/analytics/query` (tabelas + filtros)
+   2. Backend → Executa SQL parametrizado → Retorna dados (max 50 linhas)
+   3. Frontend → `POST /api/analytics/ask` (dados + prompt + modelo)
+   4. Backend → Converte para Markdown + Injeta system prompt
+   5. Backend → `POST /api/chat` para Ollama (local)
+   6. Ollama → Processa e retorna resposta em Markdown
+   7. Backend → Retorna para frontend
+   8. Frontend → Renderiza com `react-markdown` + intercepta gráficos com `ChartRenderer`
 
 ---
 

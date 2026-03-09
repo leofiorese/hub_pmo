@@ -138,10 +138,13 @@ const QueryBuilder = () => {
     const groupedSchema = useMemo(() => {
         const omie = [];
         const pso = [];
+        const mock = [];
 
         Object.entries(schema).forEach(([key, table]) => {
             if (key.startsWith('OMIE_')) {
                 omie.push({ key, ...table });
+            } else if (key.startsWith('MOCK_')) {
+                mock.push({ key, ...table });
             } else {
                 pso.push({ key, ...table });
             }
@@ -149,8 +152,9 @@ const QueryBuilder = () => {
 
         omie.sort((a, b) => a.friendlyName.localeCompare(b.friendlyName));
         pso.sort((a, b) => a.friendlyName.localeCompare(b.friendlyName));
+        mock.sort((a, b) => a.friendlyName.localeCompare(b.friendlyName));
 
-        return { omie, pso };
+        return { omie, pso, mock };
     }, [schema]);
 
     if (loading) {
@@ -221,6 +225,28 @@ const QueryBuilder = () => {
                     <Divider sx={{ mb: 3 }} />
                     <Grid container spacing={3}>
                         {groupedSchema.pso.map(table => (
+                            <TableCard
+                                key={table.key}
+                                tableKey={table.key}
+                                tableData={table}
+                                selectedColumns={selectedColumns[table.key]}
+                                onSelectTable={handleSelectTable}
+                                onToggleColumn={handleToggleColumn}
+                            />
+                        ))}
+                    </Grid>
+                </Box>
+            )}
+
+            {/* Dados Mock Section */}
+            {groupedSchema.mock.length > 0 && (
+                <Box sx={{ mb: 4 }}>
+                    <Typography variant="h5" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: '#9c27b0' }}>
+                        <StorageIcon /> Dados Mock ({groupedSchema.mock.length})
+                    </Typography>
+                    <Divider sx={{ mb: 3 }} />
+                    <Grid container spacing={3}>
+                        {groupedSchema.mock.map(table => (
                             <TableCard
                                 key={table.key}
                                 tableKey={table.key}
